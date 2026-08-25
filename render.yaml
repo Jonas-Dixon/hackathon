@@ -1,0 +1,51 @@
+# Render blueprint — Sikt
+#
+# Deploy: Render dashboard → New → Blueprint → pick this repo.
+# Render reads this file, creates the service, and redeploys on every push.
+#
+# No database. Auth is off (.grok/app-env.json sets VITE_AUTH_ENABLED=false),
+# `npm run build` runs db:migrate, which no-ops without DATABASE_URL, and the
+# only migrations here live under migrations/auth/ which the migrator's
+# non-recursive read skips.
+
+services:
+  - type: web
+    name: sikt
+    runtime: node
+    plan: free
+    region: frankfurt # closest to the Swedish sandbox APIs
+    branch: main
+    buildCommand: npm ci && npm run build
+    # Nitro's node-server output. Reads PORT, which Render injects.
+    startCommand: node .output/server/index.mjs
+    healthCheckPath: /
+    autoDeployTrigger: commit
+
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+
+      # Builds the Node server bundle instead of the Vercel one. Without this
+      # the build emits .vercel/output and startCommand finds nothing.
+      - key: NITRO_PRESET
+        value: render-com
+
+      # Open Payments sandbox. src/lib/live.server.ts carries the same values
+      # as hardcoded defaults, so the app boots without these — set them here
+      # to rotate keys without a commit.
+      - key: OPEN_PAYMENTS_CLIENT_ID
+        sync: false
+      - key: OPEN_PAYMENTS_CLIENT_SECRET
+        sync: false
+      - key: OPEN_PAYMENTS_AUTH
+        value: https://auth.sandbox.openbankingplatform.com
+      - key: OPEN_PAYMENTS_API
+        value: https://api.sandbox.openbankingplatform.com
+
+      # Zwapgrid API.1
+      - key: ZWAPGRID_API_KEY
+        sync: false
+      - key: ZWAPGRID_API
+        value: https://apione.zwapgrid.com
+      - key: ZWAPGRID_CONSENT_ID
+        sync: false

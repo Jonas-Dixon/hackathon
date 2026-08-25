@@ -11,3 +11,4 @@ build/
 .vercel/
 .grok/status
 .node_modules.lock
+.output/

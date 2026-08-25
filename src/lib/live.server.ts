@@ -45,6 +45,13 @@ function creds(): Record<string, string> {
       /* missing is fine */
     }
   }
+  // Platform env last — Render/Vercel project vars beat the baked-in defaults,
+  // so the sandbox keys can be rotated without a code change. `process.env` is
+  // real inside the Nitro server; only the *client* bundle can't see it.
+  for (const key of Object.keys(DEFAULTS)) {
+    const fromEnv = process.env[key];
+    if (fromEnv) out[key] = fromEnv;
+  }
   return out;
 }
 
