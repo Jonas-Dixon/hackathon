@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { Plugin } from "vite";
@@ -11,6 +12,34 @@ import { grokPwaPlugin } from "./scripts/grok-pwa-plugin.mjs";
 // @ts-expect-error JS plugin alongside the TS vite config
 import { appEnvPlugin } from "./scripts/app-env-plugin.mjs";
 import { isMigrationFile } from "./scripts/migration-plan.mjs";
+
+/**
+ * Byggstämpel, läst från git — eller från Vercels env när bygget kör där utan
+ * git-historik. Två personer ska kunna jämföra strängen i gränssnittet och veta
+ * om de tittar på samma kod.
+ */
+function git(command: string): string {
+  try {
+    return execSync(command, { stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim();
+  } catch {
+    return "";
+  }
+}
+
+function buildStamp() {
+  const sha = git("git rev-parse --short HEAD") || process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7);
+  const branch =
+    git("git rev-parse --abbrev-ref HEAD") || process.env.VERCEL_GIT_COMMIT_REF || "";
+  return {
+    commit: sha || "",
+    branch,
+    // Ocommitterat i trädet betyder att sha:t inte beskriver det som byggdes.
+    dirty: git("git status --porcelain") !== "",
+    builtAt: new Date().toISOString(),
+  };
+}
 
 /** The files `src/lib/db.ts` globs — same directory, same non-recursive scope. */
 function hasGlobbedMigrations(root: string): boolean {
@@ -183,4 +212,13 @@ export default defineConfig(({ command, isPreview }) => ({
       : []),
     viteReact(),
   ],
+  define: (() => {
+    const stamp = buildStamp();
+    return {
+      __APP_COMMIT__: JSON.stringify(stamp.commit),
+      __APP_BRANCH__: JSON.stringify(stamp.branch),
+      __APP_BUILT_AT__: JSON.stringify(stamp.builtAt),
+      __APP_DIRTY__: JSON.stringify(stamp.dirty),
+    };
+  })(),
 }));
