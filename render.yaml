@@ -22,8 +22,12 @@ services:
     autoDeployTrigger: commit
 
     envVars:
+      # Must be 24+, which ships npm 11. npm 10 (bundled with Node 22) resolves
+      # the optional peer deps of Nitro's `unstorage` differently and fails
+      # `npm ci` with "Missing: lru-cache@11.5.2 from lock file", even though
+      # the lock is valid — this lock is generated and verified under npm 11.
       - key: NODE_VERSION
-        value: "22"
+        value: "24"
 
       # Builds the Node server bundle instead of the Vercel one. Without this
       # the build emits .vercel/output and startCommand finds nothing.
