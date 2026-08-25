@@ -15,6 +15,9 @@ import { demoSource } from "./demo-source.ts";
  *
  * Mockdata läggs enklast som en JSON-fil i contracts-form och läses av en källa
  * som bara gör `await import("./fixtures/nordborr.json")`.
+ *
+ * Bär källan en API-nyckel hör den inte hemma här — den här listan importeras av
+ * klienten. Se financials.ts, som hämtar den skarpa Zwapgrid-källan på servern.
  */
 const SOURCES: FinancialSource[] = [demoSource];
 

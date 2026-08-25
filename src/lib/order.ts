@@ -32,6 +32,8 @@ export type Judgement = {
   suggestedDays: DayPoint[] | null;
   /** Utan någon ny order alls. Referenslinjen. */
   baselineDays: DayPoint[];
+  /** Underskott som finns oavsett ordern, och som inget orderdatum lagar. */
+  baselineHole: { date: string; cash: number; blocker: Judgement["blocker"] } | null;
   cites: CiteId[];
 };
 
@@ -93,9 +95,64 @@ function blockerFor(days: DayPoint[], trough: DayPoint): Judgement["blocker"] {
 /** Måste täcka orderdatum + betalningsvillkor + förseningen, med marginal. */
 export const HORIZON_DAYS = 300;
 
+/** Dagarna efter kundens betalning som fortfarande hör till ordern. */
+const TAIL_DAYS = 30;
+
+/**
+ * Spannet en order faktiskt påverkar: materialet ut, kunden betalar, och en
+ * marginal för lönen strax efter.
+ *
+ * Bottnen mäts bara här. Längre bort vet reskontran vad som ska ut i tolv
+ * månader men bara vad som ska in i tre — att döma på det spannet vore att
+ * stoppa varje order för ett underskott som bara beror på att fakturorna för
+ * hösten ännu inte är skrivna.
+ */
+export function orderSpanDays(): number {
+  const t = ORDER_TEMPLATE;
+  return t.paymentTermDays.value + t.customerLateDays.value + TAIL_DAYS;
+}
+
+/** Horisonten måste nå förbi ordern även när den skjuts framåt i tiden. */
+export function horizonFor(orderDate: string): number {
+  const offset = Math.round((Date.parse(orderDate) - TODAY.getTime()) / 86_400_000);
+  return Math.max(0, offset) + orderSpanDays();
+}
+
+/**
+ * Bottnen inom orderns eget spann — samma fönster som kurvan ritar.
+ *
+ * Fönstret börjar på orderdatumet, för frågan är vad *ordern* gör med kassan.
+ * Ett hål som redan ligger före orderdatumet hör inte hit: det finns kvar hur
+ * mycket ordern än flyttas, och skulle bara få varje datum att se omöjligt ut.
+ * Det rapporteras separat, som `baselineHole`.
+ */
+export function troughWithin(days: DayPoint[], orderDate: string): DayPoint {
+  const from = Math.max(0, days.findIndex((d) => d.date === orderDate));
+  const scope = days.slice(from, from + orderSpanDays());
+  return troughOf(scope.length ? scope : days);
+}
+
+/**
+ * Underskott som finns utan någon ny order alls, fram till att ordern är klar.
+ *
+ * Att flytta ordern lagar inte det här — därför hålls det utanför domen, men
+ * det får inte tigas ihjäl heller: kassan kan gå back innan ordern ens är lagd.
+ */
+function holeBefore(baselineDays: DayPoint[], orderDate: string): Judgement["baselineHole"] {
+  const placed = Math.max(0, baselineDays.findIndex((d) => d.date === orderDate));
+  const scope = baselineDays.slice(0, placed + orderSpanDays());
+  if (!scope.length) return null;
+  const low = troughOf(scope);
+  if (low.endCash >= 0) return null;
+  return { date: low.date, cash: low.endCash, blocker: blockerFor(scope, low) };
+}
+
 function troughFor(draft: OrderDraft): { days: DayPoint[]; trough: DayPoint } {
-  const days = projectWith([...baseFlows(), ...orderFlows(draft)], HORIZON_DAYS);
-  return { days, trough: troughOf(days) };
+  const days = projectWith(
+    [...baseFlows(), ...orderFlows(draft)],
+    horizonFor(draft.orderDate),
+  );
+  return { days, trough: troughWithin(days, draft.orderDate) };
 }
 
 /**
@@ -120,7 +177,8 @@ export function judge(draft: OrderDraft): Judgement {
   const paymentDate = iso(addDays(placed, t.paymentTermDays.value + t.customerLateDays.value));
   const shortfall = Math.max(0, CUSHION - trough.endCash);
   const cites: CiteId[] = ["op-balance", "zg-cinv-muller", "zg-sinv-atlas", "model-order"];
-  const baselineDays = projectWith(baseFlows(), HORIZON_DAYS);
+  const baselineDays = projectWith(baseFlows(), horizonFor(draft.orderDate));
+  const baselineHole = holeBefore(baselineDays, draft.orderDate);
 
   if (trough.endCash >= CUSHION) {
     return {
@@ -138,6 +196,7 @@ export function judge(draft: OrderDraft): Judgement {
       days,
       suggestedDays: null,
       baselineDays,
+      baselineHole,
       cites,
     };
   }
@@ -165,6 +224,7 @@ export function judge(draft: OrderDraft): Judgement {
       days,
       suggestedDays,
       baselineDays,
+      baselineHole,
       cites,
     };
   }
@@ -184,6 +244,7 @@ export function judge(draft: OrderDraft): Judgement {
     days,
     suggestedDays,
     baselineDays,
+    baselineHole,
     cites,
   };
 }

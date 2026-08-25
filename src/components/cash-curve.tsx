@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { fmtDay } from "@/lib/capacity";
 import type { DayPoint } from "@/lib/engine";
-import type { Judgement } from "@/lib/order";
+import { orderSpanDays, type Judgement } from "@/lib/order";
 import { cn, formatSek } from "@/lib/utils";
 
 const W = 360;
@@ -225,12 +225,14 @@ function Scenario({
   );
 }
 
-/** Samma antal dagar räknat från när ordern läggs — annars jämför vi inte samma sak. */
-const WINDOW_DAYS = 100;
-
+/**
+ * Samma antal dagar räknat från när ordern läggs — annars jämför vi inte samma
+ * sak. Fönstret är orderns eget spann, alltså exakt det `judge()` mäter bottnen
+ * på: ritade vi ett annat skulle kurvan kunna vara grön under ett rött svar.
+ */
 function windowFrom(days: DayPoint[], startDate: string): DayPoint[] {
   const start = Math.max(0, days.findIndex((d) => d.date === startDate));
-  return days.slice(start, start + WINDOW_DAYS);
+  return days.slice(start, start + orderSpanDays());
 }
 
 export function CashCurve({ verdict, className }: { verdict: Judgement; className?: string }) {

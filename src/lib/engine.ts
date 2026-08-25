@@ -1,6 +1,7 @@
 import { addDays, iso, parseIso } from "./utils";
 
-export const TODAY = parseIso("2026-11-20");
+/** Riktigt datum, för reskontran vi läser är daterad i verklig tid. */
+export const TODAY = parseIso(new Date().toISOString().slice(0, 10));
 
 export type FlowKind = "in" | "out";
 export type FlowSource = "bank" | "boks" | "order";
@@ -150,9 +151,27 @@ export function daysAhead(n = 84) {
   return Array.from({ length: n }, (_, i) => addDays(TODAY, i));
 }
 
+/**
+ * Underlaget som projektionen vilar på, satt av routens loader innan något
+ * räknas. Ett bolag har en reskontra, så lösaren och orderhjälpen kan läsa den
+ * genom `baseFlows()` utan att varje anropskedja behöver bära den vidare.
+ *
+ * Är den inte satt gäller demoflödet — en tom bok skulle se ut som ett bolag
+ * helt utan åtaganden, vilket är det farligaste svaret vi kan ge.
+ */
+let LEDGER: { cash: number; flows: Flow[] } | null = null;
+
+export function setLedger(ledger: { cash: number; flows: Flow[] }) {
+  LEDGER = ledger;
+}
+
+export function currentCash(): number {
+  return LEDGER?.cash ?? COMPANY.cash;
+}
+
 /** Grundflödet utan någon ny order — utgångspunkt för egna beräkningar. */
 export function baseFlows(): Flow[] {
-  return [...BASE_FLOWS];
+  return LEDGER ? [...LEDGER.flows] : [...BASE_FLOWS];
 }
 
 export function buildFlows(scenario: Scenario, takeOrder: boolean): Flow[] {
@@ -199,7 +218,7 @@ export function project(scenario: Scenario, takeOrder: boolean): DayPoint[] {
  * ren utgift.
  */
 export function projectWith(flows: Flow[], horizon = 84): DayPoint[] {
-  let cash = COMPANY.cash;
+  let cash = currentCash();
   return daysAhead(horizon).map((d) => {
     const key = iso(d);
     const todays = flows.filter((f) => f.date === key);
@@ -256,7 +275,7 @@ export function decide(scenario: Scenario, takeOrder: boolean): Verdict {
       trough: trough.endCash,
       troughDate: trough.date,
       needed: 0,
-      haveOnSpendDay: COMPANY.cash,
+      haveOnSpendDay: currentCash(),
     };
   }
 

@@ -6,7 +6,9 @@ import { SourceLedger } from "@/components/cite";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { baselineCapacity, capacityFor, fmtDay, methodLine } from "@/lib/capacity";
 import { CITATIONS, type CiteId } from "@/lib/citations";
-import { COMPANY, SCENARIOS } from "@/lib/engine";
+import { availableBalance, toFlows } from "@/lib/data";
+import { getFinancials } from "@/lib/data/financials";
+import { COMPANY, SCENARIOS, TODAY, setLedger } from "@/lib/engine";
 import { cn, formatSek } from "@/lib/utils";
 
 const ALL_CITES = Object.keys(CITATIONS) as CiteId[];
@@ -15,10 +17,17 @@ export const Route = createFileRoute("/utrymme")({
   head: () => ({
     meta: [{ title: "Sikt — Orderutrymme" }],
   }),
+  loader: () => getFinancials(),
   component: CapacityPage,
 });
 
 function CapacityPage() {
+  const financials = Route.useLoaderData();
+  setLedger({
+    cash: availableBalance(financials.balances),
+    flows: toFlows(financials, TODAY, 12),
+  });
+
   const baseline = useMemo(() => baselineCapacity(), []);
   const withOrders = useMemo(
     () =>

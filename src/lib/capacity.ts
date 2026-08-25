@@ -1,8 +1,8 @@
 import type { CiteId } from "./citations";
 import {
-  COMPANY,
   SCENARIOS,
   TODAY,
+  currentCash,
   project,
   type DayPoint,
   type Risk,
@@ -164,5 +164,5 @@ export function todayIso(): string {
 
 export function methodLine(): string {
   const cushion = Math.round(CUSHION / 1000).toLocaleString("sv-SE");
-  return `Utrymmet är allt över kudden på ${cushion} k. Vi projicerar saldot dag för dag i 12 veckor — bankens saldo, fakturornas förfallodatum justerade efter hur motparten brukar betala, och ordern där dess utgifter faktiskt landar. Taket är första dagen kassan dyker under kudden. Startsaldo ${COMPANY.cash.toLocaleString("sv-SE")} kr.`;
+  return `Utrymmet är allt över kudden på ${cushion} k. Vi projicerar saldot dag för dag i 12 veckor — bankens saldo, fakturornas förfallodatum justerade efter hur motparten brukar betala, och ordern där dess utgifter faktiskt landar. Taket är första dagen kassan dyker under kudden. Startsaldo ${currentCash().toLocaleString("sv-SE")} kr.`;
 }

@@ -235,6 +235,18 @@ export function AnswerStep({
         <Cite ids={verdict.cites} />
       </p>
 
+      {verdict.baselineHole ? (
+        <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-storm">
+          Oavsett ordern: kontot går till{" "}
+          {formatSek(verdict.baselineHole.cash, true)} den{" "}
+          {fmtDay(verdict.baselineHole.date)}
+          {verdict.baselineHole.blocker
+            ? `, när ${verdict.baselineHole.blocker.label} på ${formatSek(verdict.baselineHole.blocker.amount, true)} förfaller`
+            : ""}
+          . Inget orderdatum lagar det.
+        </p>
+      ) : null}
+
       <div className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-2">
         <button
           type="button"

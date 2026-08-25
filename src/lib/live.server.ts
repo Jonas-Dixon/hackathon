@@ -8,9 +8,9 @@ const DEFAULTS: Record<string, string> = {
   OPEN_PAYMENTS_AUTH: "https://auth.sandbox.openbankingplatform.com",
   OPEN_PAYMENTS_API: "https://api.sandbox.openbankingplatform.com",
   ZWAPGRID_API_KEY:
-    "9nNPoXhu7nvwiIzfuTRL1dKrYy7QkmHgpxUcPDHAODVtqlsjWHw9Na1BJSZ3amlb_/WV2f52P7obsMbPuRKBxS9+Avo0EmCueHzAibSXt0RY=_30OfJftNwmwLIoTsW12BAw==",
+    "Rf4/okTP9HkI5b5WWrpQXhOPyuxGb6BebiOYAuLRi3McNOzcAbVJ0wbtsYNYZqDR_hoAmx+Kd7jotyav7nYbDUIVEdamqN1LAFzYoBD6DDdk=_mGWDfWbpLb91Y2TNrc8w4A==",
   ZWAPGRID_API: "https://apione.zwapgrid.com",
-  ZWAPGRID_CONSENT_ID: "e016cecd-f628-49e8-9902-7461277da8b6",
+  ZWAPGRID_CONSENT_ID: "60141c3c-7821-41d0-86d6-a5842ea721e3",
 };
 
 const ZG_STATUS: Record<number, string> = {
@@ -53,6 +53,15 @@ function creds(): Record<string, string> {
     if (fromEnv) out[key] = fromEnv;
   }
   return out;
+}
+
+export function zwapgridConfig() {
+  const c = creds();
+  return {
+    api: c.ZWAPGRID_API,
+    apiKey: c.ZWAPGRID_API_KEY,
+    consentId: c.ZWAPGRID_CONSENT_ID,
+  };
 }
 
 function abs(base: string, path: string) {

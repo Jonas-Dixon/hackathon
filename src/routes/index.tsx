@@ -16,19 +16,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { fmtDay } from "@/lib/capacity";
 import { CITATIONS, type CiteId } from "@/lib/citations";
-import { TODAY, type DayPoint } from "@/lib/engine";
+import { availableBalance, toFlows } from "@/lib/data";
+import { getFinancials } from "@/lib/data/financials";
+import { TODAY, setLedger, type DayPoint } from "@/lib/engine";
 import { getLiveSnapshot } from "@/lib/live";
 import { cn, formatSek, iso } from "@/lib/utils";
 
 const ALL_CITES = Object.keys(CITATIONS) as CiteId[];
 
 export const Route = createFileRoute("/")({
-  loader: () => getLiveSnapshot(),
+  loader: async () => {
+    const [live, financials] = await Promise.all([getLiveSnapshot(), getFinancials()]);
+    return { live, financials };
+  },
   component: DecisionPage,
 });
 
 function DecisionPage() {
-  const live = Route.useLoaderData();
+  const { live, financials } = Route.useLoaderData();
+
+  // Reskontran innan något projiceras — även vid rendering på servern, för
+  // annars svarar första sidvisningen på demoflödet.
+  setLedger({
+    cash: availableBalance(financials.balances),
+    flows: toFlows(financials, TODAY, 12),
+  });
+
   const d = useDecision();
 
   return (

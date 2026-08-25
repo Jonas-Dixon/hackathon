@@ -1,6 +1,6 @@
 import { CUSHION, fmtDay } from "./capacity";
 import { TODAY, baseFlows, projectWith, type DayPoint, type Flow } from "./engine";
-import { HORIZON_DAYS, orderFlows, type OrderDraft } from "./order";
+import { horizonFor, orderFlows, troughWithin, type OrderDraft } from "./order";
 import { ORDER_TEMPLATE } from "./profile";
 import { addDays, formatSek, iso, parseIso } from "./utils";
 
@@ -17,12 +17,9 @@ import { addDays, formatSek, iso, parseIso } from "./utils";
  * Ingen av dem beslutar något. De visar vad räknandet säger; ägaren förhandlar.
  */
 
-function troughOf(days: DayPoint[]): DayPoint {
-  return days.reduce((m, p) => (p.endCash < m.endCash ? p : m), days[0]);
-}
-
-function troughFor(flows: Flow[]): DayPoint {
-  return troughOf(projectWith(flows, HORIZON_DAYS));
+/** Samma fönster som `judge()` dömer på — annars svarar spakarna på en annan fråga. */
+function troughFor(flows: Flow[], orderDate: string): DayPoint {
+  return troughWithin(projectWith(flows, horizonFor(orderDate)), orderDate);
 }
 
 /** Flytta en post n dagar, utan att röra resten av listan. */
@@ -59,13 +56,13 @@ type Variant = { ask: string; effect: string; flows: Flow[] };
  * Hittar vi ingen som når över kudden returnerar vi den bästa ändå, märkt som
  * otillräcklig. Att veta att en spak inte räcker är också ett svar.
  */
-function search(steps: number[], make: (step: number) => Variant | null) {
+function search(steps: number[], orderDate: string, make: (step: number) => Variant | null) {
   let best: { variant: Variant; point: DayPoint } | null = null;
 
   for (const step of steps) {
     const variant = make(step);
     if (!variant) continue;
-    const point = troughFor(variant.flows);
+    const point = troughFor(variant.flows, orderDate);
     if (!best || point.endCash > best.point.endCash) best = { variant, point };
     if (point.endCash >= CUSHION) return { variant, point, solved: true };
   }
@@ -159,7 +156,7 @@ export function levers(draft: OrderDraft): Lever[] {
   const payment = order.find((f) => f.kind === "in");
   if (!material || !payment) return [];
 
-  const basePoint = troughFor([...others, ...order]);
+  const basePoint = troughFor([...others, ...order], draft.orderDate);
   const baseTrough = basePoint.endCash;
 
   // Ligger botten redan över kudden är frågan "vad skulle göra det till ett ja?"
@@ -174,7 +171,7 @@ export function levers(draft: OrderDraft): Lever[] {
     toLever(
       "deposit",
       "Förskott",
-      search([0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6], (share) => {
+      search([0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6], draft.orderDate, (share) => {
         const amount = Math.round(draft.amount * share);
         return {
           ask: `Be ${t.customer.value} om ${pct(share)} förskott — ${formatSek(amount)} vid beställning.`,
@@ -203,7 +200,7 @@ export function levers(draft: OrderDraft): Lever[] {
     toLever(
       "terms",
       "Kortare villkor",
-      search([7, 14, 21, 30, 45], (days) => {
+      search([7, 14, 21, 30, 45], draft.orderDate, (days) => {
         const moved = shift(payment, -days);
         if (moved.date <= draft.orderDate) return null;
         return {
@@ -221,7 +218,7 @@ export function levers(draft: OrderDraft): Lever[] {
     toLever(
       "material",
       "Kredit på materialet",
-      search([14, 30, 45, 60], (days) => {
+      search([14, 30, 45, 60], draft.orderDate, (days) => {
         const moved = shift(material, days);
         return {
           ask: `Be leverantören om ${days} dagars kredit — betala materialet ${fmtDay(moved.date)}.`,
@@ -241,7 +238,7 @@ export function levers(draft: OrderDraft): Lever[] {
       toLever(
         "receivable",
         "Ring en kund",
-        search([7, 14, 21, MAX_PULL_DAYS], (days) => {
+        search([7, 14, 21, MAX_PULL_DAYS], draft.orderDate, (days) => {
           const moved = shift(receivable, -days);
           if (moved.date < iso(TODAY)) return null;
           return {
@@ -263,7 +260,7 @@ export function levers(draft: OrderDraft): Lever[] {
       toLever(
         "payable",
         "Skjut en faktura",
-        search([14, 21, 30, MAX_DELAY_DAYS], (days) => {
+        search([14, 21, 30, MAX_DELAY_DAYS], draft.orderDate, (days) => {
           const moved = shift(payable, days);
           return {
             ask: `Be om ${days} dagars anstånd på ${payable.label} — ${formatSek(payable.amount)}.`,
@@ -347,7 +344,11 @@ function syntheticOrder(amount: number, termDays: number, depositPct: number): F
 export function maxOrder(termDays: number, depositPct: number, existing: Flow[]): number {
   let last = 0;
   for (let amount = SCAN_STEP; amount <= SCAN_CEILING; amount += SCAN_STEP) {
-    if (troughFor([...existing, ...syntheticOrder(amount, termDays, depositPct)]).endCash < CUSHION) {
+    const placed = iso(TODAY);
+    if (
+      troughFor([...existing, ...syntheticOrder(amount, termDays, depositPct)], placed).endCash <
+      CUSHION
+    ) {
       return last;
     }
     last = amount;
