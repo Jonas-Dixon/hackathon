@@ -28,6 +28,10 @@ export type Judgement = {
   troughDate: string;
   shortfall: number;
   days: DayPoint[];
+  /** Samma order lagd på det tidigaste datum som håller — kurvan att jämföra mot. */
+  suggestedDays: DayPoint[] | null;
+  /** Utan någon ny order alls. Referenslinjen. */
+  baselineDays: DayPoint[];
   cites: CiteId[];
 };
 
@@ -116,6 +120,7 @@ export function judge(draft: OrderDraft): Judgement {
   const paymentDate = iso(addDays(placed, t.paymentTermDays.value + t.customerLateDays.value));
   const shortfall = Math.max(0, CUSHION - trough.endCash);
   const cites: CiteId[] = ["op-balance", "zg-cinv-muller", "zg-sinv-atlas", "model-order"];
+  const baselineDays = projectWith(baseFlows(), HORIZON_DAYS);
 
   if (trough.endCash >= CUSHION) {
     return {
@@ -131,18 +136,25 @@ export function judge(draft: OrderDraft): Judgement {
       troughDate: trough.date,
       shortfall: 0,
       days,
+      suggestedDays: null,
+      baselineDays,
       cites,
     };
   }
 
   const blocker = blockerFor(days, trough);
 
+  const earliest = earliestSafeDate(draft);
+  const suggestedDays = earliest
+    ? troughFor({ ...draft, orderDate: earliest }).days
+    : null;
+
   if (trough.endCash >= 0) {
     return {
       verdict: "tight",
       headline: "Ja, men det blir tunt",
       reason: `Kassan går ner till ${formatSek(trough.endCash, true)} den ${fmtDay(trough.date)}. En sen kund och det brister.`,
-      earliest: earliestSafeDate(draft),
+      earliest,
       blocker,
       materialCost,
       materialDate: draft.orderDate,
@@ -151,11 +163,12 @@ export function judge(draft: OrderDraft): Judgement {
       troughDate: trough.date,
       shortfall,
       days,
+      suggestedDays,
+      baselineDays,
       cites,
     };
   }
 
-  const earliest = earliestSafeDate(draft);
   return {
     verdict: "no",
     headline: earliest ? `Nej — men lägg den ${fmtDay(earliest)}` : "Nej — den ryms inte i år",
@@ -169,6 +182,8 @@ export function judge(draft: OrderDraft): Judgement {
     troughDate: trough.date,
     shortfall,
     days,
+    suggestedDays,
+    baselineDays,
     cites,
   };
 }

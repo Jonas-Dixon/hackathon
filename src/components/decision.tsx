@@ -1,5 +1,7 @@
-import { ArrowDown, ArrowLeft, Check } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { CashCurve } from "@/components/cash-curve";
 import { Cite } from "@/components/cite";
+import { Triangulation } from "@/components/triangulation";
 import { SourceIcon } from "@/components/source-mark";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { fmtDay } from "@/lib/capacity";
@@ -150,7 +152,7 @@ export function AnswerStep({
   onPlace: (date: string) => void;
 }) {
   return (
-    <div className="onboard-in mx-auto w-full max-w-lg">
+    <div className="onboard-in mx-auto w-full max-w-2xl">
       <button
         type="button"
         onClick={onBack}
@@ -164,60 +166,90 @@ export function AnswerStep({
         {formatSek(draft.amount)} · material {fmtDay(draft.orderDate)}
       </p>
 
-      <h1
-        className={cn(
-          "mt-3 font-display text-[clamp(3rem,10vw,5.5rem)] leading-[0.94] font-semibold tracking-[-0.02em]",
-          TONE[verdict.verdict],
-        )}
-      >
-        {WORD[verdict.verdict]}
-      </h1>
+      {/* Hovra över svaret så tonar siffrorna bakom det in. */}
+      <div className="group/verdict mt-2 inline-block">
+        <h1
+          className={cn(
+            "cursor-default font-display text-[clamp(3.75rem,13vw,7.5rem)] leading-[0.9] font-semibold tracking-[-0.03em]",
+            TONE[verdict.verdict],
+          )}
+        >
+          {WORD[verdict.verdict]}
+        </h1>
+
+        <div className="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/verdict:grid-rows-[1fr] motion-reduce:grid-rows-[1fr]">
+          <dl className="grid grid-cols-3 gap-x-5 overflow-hidden">
+            {[
+              ["Material ut", `−${formatSek(verdict.materialCost, true)}`, "text-storm"],
+              [
+                "Lägst",
+                formatSek(verdict.trough, true),
+                verdict.trough < 0 ? "text-storm" : "text-watch",
+              ],
+              ["Kunden betalar", fmtDay(verdict.paymentDate), "text-clear"],
+            ].map(([k, v, tone]) => (
+              <div key={k} className="pt-5">
+                <dt className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
+                  {k}
+                </dt>
+                <dd className={cn("mt-0.5 font-mono text-[13px] tabular", tone)}>{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </div>
 
       {verdict.earliest ? (
-        <p className="mt-3 text-[clamp(1.15rem,3vw,1.5rem)] leading-snug font-medium text-fg">
+        <p className="mt-4 text-[clamp(1.35rem,3.4vw,1.85rem)] leading-snug font-semibold tracking-tight text-fg">
           Lägg den {fmtDay(verdict.earliest)} i stället.
         </p>
       ) : null}
 
-      <p className="mt-4 max-w-md text-[15px] leading-relaxed text-muted">
-        {verdict.reason}
+      <div className="mt-6">
+        <CashCurve verdict={verdict} />
+      </div>
+
+      <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-muted">
+        {verdict.blocker
+          ? `${verdict.blocker.label} på ${formatSek(verdict.blocker.amount, true)} den ${fmtDay(verdict.blocker.date)} är det som tar kassan dit.`
+          : verdict.reason}
         <Cite ids={verdict.cites} />
       </p>
 
-      {verdict.blocker ? (
-        <p className="mt-2 max-w-md text-[15px] leading-relaxed text-muted">
-          Det som ligger i vägen är {verdict.blocker.label.toLowerCase()} på{" "}
-          {formatSek(verdict.blocker.amount, true)} den {fmtDay(verdict.blocker.date)}.
-        </p>
-      ) : null}
-
-      <div className="mt-8 flex flex-col gap-2 sm:flex-row">
+      <div className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-2">
         <button
           type="button"
           onClick={() => onPlace(verdict.earliest ?? draft.orderDate)}
-          className="rounded-md bg-primary px-6 py-3.5 text-[14px] font-medium text-primary-foreground transition-transform duration-150 hover:translate-y-px"
+          className="group/cta inline-flex items-center gap-2.5 rounded-lg bg-primary px-7 py-4 text-[16px] font-semibold tracking-tight text-primary-foreground shadow-[0_1px_0_rgb(22_22_21/0.2),0_8px_20px_rgb(22_22_21/0.16)] transition-transform duration-150 hover:translate-y-px active:translate-y-0.5"
         >
           Lägg ordern {fmtDay(verdict.earliest ?? draft.orderDate)}
+          <ArrowRight
+            className="size-4 transition-transform duration-200 group-hover/cta:translate-x-0.5"
+            aria-hidden="true"
+          />
         </button>
-        {verdict.earliest ? (
-          <button
-            type="button"
-            onClick={() => onPlace(draft.orderDate)}
-            className="rounded-md border border-border px-6 py-3.5 text-[14px] text-muted transition-colors hover:text-fg"
-          >
-            Lägg ändå {fmtDay(draft.orderDate)}
-          </button>
-        ) : null}
+
+        <button
+          type="button"
+          onClick={onDetail}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-5 py-4 text-[14px] font-medium text-fg transition-colors hover:bg-secondary"
+        >
+          Visa beslutsunderlag
+          <ArrowDown className="size-3.5" aria-hidden="true" />
+        </button>
       </div>
 
-      <button
-        type="button"
-        onClick={onDetail}
-        className="mt-8 inline-flex items-center gap-1.5 text-[14px] text-fg underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-fg"
-      >
-        Visa beslutsunderlag
-        <ArrowDown className="size-3.5" aria-hidden="true" />
-      </button>
+      {verdict.earliest ? (
+        <button
+          type="button"
+          onClick={() => onPlace(draft.orderDate)}
+          className="mt-3 text-[13px] text-subtle underline decoration-line-strong underline-offset-4 transition-colors hover:text-muted"
+        >
+          Lägg ändå {fmtDay(draft.orderDate)}
+        </button>
+      ) : null}
+
+      <Triangulation className="mt-8" />
     </div>
   );
 }
