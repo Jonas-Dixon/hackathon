@@ -1,34 +1,15 @@
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/lang";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "sikt.onboarded.v1";
-
-type Slide = {
-  kicker: string;
-  headline: string;
-  body: string;
-  cta: string;
-};
-
-const SLIDES: Slide[] = [
-  {
-    kicker: "01 — Problemet",
-    headline: "Saldot ljuger.",
-    body: "Det vet inget om lönen på 25:e. Eller om kunden som alltid betalar 23 dagar sent. Ändå är det den siffran ni beställer material på.",
-    cta: "Och sen?",
-  },
-  {
-    kicker: "02 — Sikt",
-    headline: "Ja. Nej.\nEller ett datum.",
-    body: "Banken vet vad ni har. Böckerna vet vad ni är skyldiga. Vi låter dem prata — och svarar på frågan ni faktiskt ställde.",
-    cta: "Visa mig",
-  },
-];
 
 export function Onboarding() {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [leaving, setLeaving] = useState(false);
+  const t = useT();
+  const slides = t.onboarding.slides;
 
   useEffect(() => {
     try {
@@ -59,18 +40,18 @@ export function Onboarding() {
   }
 
   function advance() {
-    if (step < SLIDES.length - 1) setStep((s) => s + 1);
+    if (step < slides.length - 1) setStep((s) => s + 1);
     else finish();
   }
 
   if (!open) return null;
-  const slide = SLIDES[step];
+  const slide = slides[step];
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Introduktion"
+      aria-label={t.onboarding.dialogLabel}
       className={cn(
         "fixed inset-0 z-50 flex flex-col bg-bg transition-opacity duration-300",
         leaving ? "opacity-0" : "opacity-100",
@@ -83,7 +64,7 @@ export function Onboarding() {
           onClick={finish}
           className="font-mono text-[11px] tracking-[0.16em] text-subtle uppercase transition-colors hover:text-fg"
         >
-          Hoppa över
+          {t.onboarding.skip}
         </button>
       </div>
 
@@ -103,7 +84,7 @@ export function Onboarding() {
 
       <div className="flex items-center justify-between gap-6 px-6 pb-10 md:px-12 md:pb-14">
         <div className="flex gap-2" aria-hidden="true">
-          {SLIDES.map((s, i) => (
+          {slides.map((s, i) => (
             <span
               key={s.kicker}
               className={cn(

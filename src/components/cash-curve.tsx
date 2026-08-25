@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { fmtDay } from "@/lib/capacity";
+import { useT } from "@/lib/lang";
 import type { DayPoint } from "@/lib/engine";
 import { orderSpanDays, type Judgement } from "@/lib/order";
 import { cn, formatSek } from "@/lib/utils";
@@ -87,6 +88,7 @@ function Scenario({
   dimmed?: boolean;
 }) {
   const uid = useId();
+  const t = useT();
   const idx = troughOf(days);
   const trough = days[idx];
   const under = trough.endCash < 0;
@@ -108,7 +110,7 @@ function Scenario({
             under ? "text-storm" : "text-clear",
           )}
         >
-          {ok ? "Håller" : "Brister"}
+          {ok ? t.curve.holds : t.curve.breaks}
         </p>
       </div>
       <p className="mt-0.5 text-[11px] text-subtle">{sub}</p>
@@ -117,7 +119,7 @@ function Scenario({
         viewBox={`0 0 ${W} ${H}`}
         className="mt-1.5 h-auto w-full"
         role="img"
-        aria-label={`${label}: lägsta kassa ${formatSek(trough.endCash)}`}
+        aria-label={t.curve.aria(label, formatSek(trough.endCash))}
       >
         <defs>
           <linearGradient id={`${uid}-fill`} x1="0" y1="0" x2="0" y2="1">
@@ -204,7 +206,7 @@ function Scenario({
           className={cn("font-mono font-medium", under ? "fill-storm" : "fill-clear")}
           fontSize="12"
         >
-          {under ? "lägst " : ""}
+          {under ? t.curve.lowestPrefix : ""}
           {formatSek(trough.endCash, true)}
         </text>
 
@@ -236,6 +238,7 @@ function windowFrom(days: DayPoint[], startDate: string): DayPoint[] {
 }
 
 export function CashCurve({ verdict, className }: { verdict: Judgement; className?: string }) {
+  const t = useT();
   const chosen = windowFrom(verdict.days, verdict.materialDate);
   const alt = verdict.suggestedDays
     ? windowFrom(verdict.suggestedDays, verdict.earliest as string)
@@ -258,16 +261,16 @@ export function CashCurve({ verdict, className }: { verdict: Judgement; classNam
         <Scenario
           days={chosen}
           bounds={bounds}
-          label={`Lagd ${fmtDay(verdict.materialDate)}`}
-          sub={verdict.earliest ? "det ni valde" : "ordern"}
+          label={t.curve.placedOn(fmtDay(verdict.materialDate))}
+          sub={verdict.earliest ? t.curve.youChose : t.curve.theOrder}
           ok={verdict.trough >= 0}
         />
         {alt ? (
           <Scenario
             days={alt}
             bounds={bounds}
-            label={`Lagd ${fmtDay(verdict.earliest as string)}`}
-            sub="samma order, senare"
+            label={t.curve.placedOn(fmtDay(verdict.earliest as string))}
+            sub={t.curve.sameLater}
             ok
             dimmed
           />

@@ -1,3 +1,4 @@
+import { strings } from "./lang";
 import { addDays, iso } from "./utils";
 
 /** Riktigt datum, för reskontran vi läser är daterad i verklig tid. */
@@ -24,27 +25,21 @@ export type Flow = {
   basis: string;
 };
 
-export const CERTAINTY_LABEL: Record<Certainty, string> = {
-  fast: "Fast",
-  forutsagbar: "Förutsägbar",
-  antagande: "Antagande",
-};
+/** Etiketterna bor i språkpaketet — de här läser bara upp dem. */
+export function certaintyLabel(c: Certainty): string {
+  return strings().day.certainty[c];
+}
 
-export const CERTAINTY_TIP: Record<Certainty, string> = {
-  fast: "Avtalad post. Datum och belopp är kända i förväg.",
-  forutsagbar: "Faktura med förfallodatum, justerad efter hur motparten brukar betala.",
-  antagande: "Ingen faktura ännu. Vi räknar med den, men den kan utebli.",
-};
+export function certaintyTip(c: Certainty): string {
+  return strings().day.certaintyTip[c];
+}
 
 export type Risk = "clear" | "watch" | "storm" | "gap";
 
 /** Kassaläget en given dag, i klartext. Ingen väderliknelse. */
-export const RISK_LABEL: Record<Risk, string> = {
-  clear: "Täckt",
-  watch: "Tunn marginal",
-  storm: "Under noll",
-  gap: "Lucka i data",
-};
+export function riskLabel(r: Risk): string {
+  return strings().day.risk[r];
+}
 
 export type DayPoint = {
   date: string;
@@ -58,10 +53,17 @@ export type DayPoint = {
 
 export type ScenarioId = "german" | "service" | "none";
 
+export function scenarioName(id: ScenarioId): string {
+  return strings().scenario[id];
+}
+
+export function scenarioBlurb(id: ScenarioId): string {
+  const L = strings().scenario;
+  return id === "german" ? L.germanBlurb : id === "service" ? L.serviceBlurb : L.noneBlurb;
+}
+
 export type Scenario = {
   id: ScenarioId;
-  name: string;
-  blurb: string;
   orderAmount: number;
   materialCost: number;
   materialDate: string;
@@ -85,8 +87,6 @@ export const COMPANY = {
 export const SCENARIOS: Scenario[] = [
   {
     id: "german",
-    name: "Tysk order",
-    blurb: "Müller Tiefbau, 840 k. Material måste köpas nu. De betalar om 60 dagar.",
     orderAmount: 840_000,
     materialCost: 520_000,
     materialDate: "2026-12-02",
@@ -96,8 +96,6 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: "service",
-    name: "Servicejobb",
-    blurb: "Befintlig kund. 95 k. Lite material, betalt inom 14 dagar.",
     orderAmount: 95_000,
     materialCost: 18_000,
     materialDate: "2026-11-24",
@@ -107,8 +105,6 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: "none",
-    name: "Ingen ny order",
-    blurb: "Bara det som redan ligger. Lön, material, inbetalningar.",
     orderAmount: 0,
     materialCost: 0,
     materialDate: "2026-11-20",

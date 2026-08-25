@@ -1,6 +1,7 @@
 import type { CiteId } from "./citations";
 import {
   SCENARIOS,
+  scenarioName,
   TODAY,
   currentCash,
   project,
@@ -8,6 +9,7 @@ import {
   type Risk,
   type Scenario,
 } from "./engine";
+import { strings } from "./lang";
 import { formatSek, iso, parseIso } from "./utils";
 
 /** Säkerhetskudde. Under den vill ingen hamna, även om kontot är på plus. */
@@ -118,23 +120,24 @@ export function capacityFor(scenario: Scenario, takeOrder: boolean): CapacitySum
   }));
 
   const ok = !ceiling;
+  const L = strings();
   let headline: string;
   let sub: string;
 
   if (ok) {
     headline =
       ordersLeft > 1
-        ? `Ja — ${ordersLeft} jobb till får plats`
+        ? L.capacity.headline.manyLeft(ordersLeft)
         : ordersLeft === 1
-          ? "Ja — ett jobb till får plats"
-          : "Ja, men inget mer";
-    sub = `Kassan håller sig över kudden hela perioden. Lägst ${formatSek(trough.endCash, true)} den ${fmtDay(trough.date)}.`;
+          ? L.capacity.headline.oneLeft
+          : L.capacity.headline.noneLeft;
+    sub = L.capacity.subOk(formatSek(trough.endCash, true), fmtDay(trough.date));
   } else {
-    headline = `Nej — utrymmet tar slut ${fmtDay(ceiling.date)}`;
+    headline = L.capacity.headline.ceiling(fmtDay(ceiling.date));
     sub =
       trough.endCash < 0
-        ? `Kassan går under noll den ${fmtDay(trough.date)}, som lägst −${formatSek(Math.abs(trough.endCash), true)}.`
-        : `Kassan dyker under kudden den ${fmtDay(ceiling.date)} och stannar tunn.`;
+        ? L.capacity.subUnder(fmtDay(trough.date), formatSek(Math.abs(trough.endCash), true))
+        : L.capacity.subThin(fmtDay(ceiling.date));
   }
 
   return {
@@ -145,7 +148,7 @@ export function capacityFor(scenario: Scenario, takeOrder: boolean): CapacitySum
     headroomNow,
     shortfall,
     ordersLeft,
-    referenceName: REFERENCE.name.toLowerCase(),
+    referenceName: scenarioName(REFERENCE.id).toLowerCase(),
     ceilingDate: ceiling?.date ?? null,
     days,
     drivers,
@@ -164,5 +167,5 @@ export function todayIso(): string {
 
 export function methodLine(): string {
   const cushion = Math.round(CUSHION / 1000).toLocaleString("sv-SE");
-  return `Utrymmet är allt över kudden på ${cushion} k. Vi projicerar saldot dag för dag i 12 veckor — bankens saldo, fakturornas förfallodatum justerade efter hur motparten brukar betala, och ordern där dess utgifter faktiskt landar. Taket är första dagen kassan dyker under kudden. Startsaldo ${currentCash().toLocaleString("sv-SE")} kr.`;
+  return strings().capacity.methodLine(cushion, currentCash().toLocaleString("sv-SE"));
 }

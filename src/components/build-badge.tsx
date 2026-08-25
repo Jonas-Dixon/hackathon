@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "@/lib/lang";
 import { BUILD, versionDetail, versionLabel } from "@/lib/version";
 
 /**
@@ -10,17 +11,18 @@ import { BUILD, versionDetail, versionLabel } from "@/lib/version";
  */
 export function BuildBadge() {
   const [open, setOpen] = useState(false);
+  const t = useT();
 
   return (
     <button
       type="button"
       onClick={() => setOpen((v) => !v)}
       title={versionDetail()}
-      aria-label={`Byggversion ${versionDetail()}`}
+      aria-label={t.build.label(versionDetail())}
       className="fixed bottom-3 left-3 z-40 rounded-full border border-line-strong/60 bg-card/85 px-2.5 py-1 font-mono text-[10px] tracking-[0.12em] text-subtle uppercase opacity-60 backdrop-blur transition-all hover:border-fg/40 hover:text-fg hover:opacity-100"
     >
       {open ? versionDetail() : `build ${versionLabel()}`}
-      {BUILD.dirty && !open ? <span className="sr-only"> (ocommittat)</span> : null}
+      {BUILD.dirty && !open ? <span className="sr-only"> ({t.build.uncommitted})</span> : null}
     </button>
   );
 }

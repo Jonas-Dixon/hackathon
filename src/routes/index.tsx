@@ -19,6 +19,7 @@ import { CITATIONS, citationFactsFrom, setCitationFacts, type CiteId } from "@/l
 import { availableBalance, toFlows } from "@/lib/data";
 import { getFinancials } from "@/lib/data/financials";
 import { TODAY, setLedger, type DayPoint } from "@/lib/engine";
+import { useLang, useT } from "@/lib/lang";
 import { getLiveSnapshot } from "@/lib/live";
 import { feedHealthFrom } from "@/lib/sources";
 import { cn, formatSek, iso } from "@/lib/utils";
@@ -35,6 +36,8 @@ export const Route = createFileRoute("/")({
 
 function DecisionPage() {
   const { live, financials } = Route.useLoaderData();
+  // Postetiketterna i reskontran räknas om när språket byts.
+  useLang();
 
   // Reskontran innan något projiceras — även vid rendering på servern, för
   // annars svarar första sidvisningen på demoflödet.
@@ -95,9 +98,11 @@ function Detail({
   verdictDays: DayPoint[];
   onBack: () => void;
 }) {
+  const t = useT();
   const [hover, setHover] = useState<DayPoint | null>(null);
   const days = useMemo(() => verdictDays.slice(0, 84), [verdictDays]);
   const selected = hover ?? days.find((x) => x.date === iso(TODAY)) ?? days[0] ?? null;
+  // Nyckeln är en markör, inte en etikett — kalendern jämför mot "idag".
   const marks: Record<string, string> = { [iso(TODAY)]: "idag" };
   const trough = useMemo(
     () => days.reduce((m, p) => (p.endCash < m.endCash ? p : m), days[0]),
@@ -112,18 +117,17 @@ function Detail({
         className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" aria-hidden="true" />
-        Tillbaka till svaret
+        {t.detail.back}
       </button>
 
-      <h1 className="mt-6 text-xl font-semibold tracking-tight">Beslutsunderlag</h1>
+      <h1 className="mt-6 text-xl font-semibold tracking-tight">{t.detail.title}</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Prognosen med ordern inräknad. Lägst {formatSek(trough.endCash, true)} den{" "}
-        {fmtDay(trough.date)}.
+        {t.detail.lede(formatSek(trough.endCash, true), fmtDay(trough.date))}
       </p>
 
       <section className="mt-6 rounded-lg border border-border bg-card px-4 py-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-[15px] font-medium">Kassan, 12 veckor framåt</h2>
+          <h2 className="text-[15px] font-medium">{t.detail.curve}</h2>
           <DataFeedsCompact />
         </div>
         <div className="mt-3">
@@ -143,8 +147,8 @@ function Detail({
         <Card>
           <CardHeader className="flex-row items-baseline justify-between">
             <div>
-              <CardTitle>Kassakalender</CardTitle>
-              <CardDescription>Prickens form visar hur säker dagens post är.</CardDescription>
+              <CardTitle>{t.detail.calendar}</CardTitle>
+              <CardDescription>{t.detail.calendarSub}</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -171,9 +175,9 @@ function Detail({
             className={cn("size-4 transition-transform duration-200 group-open:rotate-90")}
             aria-hidden="true"
           />
-          Källor
+          {t.common.sources}
           <span className="ml-1 font-mono text-[11px] font-normal text-subtle">
-            {ALL_CITES.length} anrop
+            {t.common.calls(ALL_CITES.length)}
           </span>
         </summary>
         <div className="mt-3">
@@ -187,9 +191,9 @@ function Detail({
             className="size-4 transition-transform duration-200 group-open:rotate-90"
             aria-hidden="true"
           />
-          Live anrop
+          {t.detail.liveCalls}
           <span className="ml-1 font-mono text-[11px] font-normal text-subtle">
-            svaren nycklarna faktiskt gav
+            {t.detail.liveCallsHint}
           </span>
         </summary>
         <div className="mt-4">

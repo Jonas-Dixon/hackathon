@@ -1,6 +1,7 @@
 import { CUSHION, fmtDay } from "./capacity";
 import type { CiteId } from "./citations";
 import { TODAY, baseFlows, projectWith, type DayPoint, type Flow } from "./engine";
+import { strings } from "./lang";
 import { ORDER_TEMPLATE } from "./profile";
 import { addDays, formatSek, iso, parseIso } from "./utils";
 
@@ -46,6 +47,7 @@ export function defaultDraft(): OrderDraft {
 /** Materialet betalas i förskott, kunden betalar långt senare — det är hela problemet. */
 export function orderFlows(draft: OrderDraft): Flow[] {
   const t = ORDER_TEMPLATE;
+  const L = strings();
   const placed = parseIso(draft.orderDate);
   const materialCost = Math.round(draft.amount * t.materialShare.value);
   const materialDate = iso(placed);
@@ -57,20 +59,20 @@ export function orderFlows(draft: OrderDraft): Flow[] {
     {
       date: materialDate,
       amount: materialCost,
-      label: `Material, ${t.customer.value}`,
+      label: L.flow.orderMaterial(t.customer.value),
       kind: "out",
       source: "order",
       certainty: "fast",
-      basis: `${Math.round(t.materialShare.value * 100)} % av ordervärdet, betalas innan leverans`,
+      basis: L.flow.orderMaterialBasis(Math.round(t.materialShare.value * 100)),
     },
     {
       date: paymentDate,
       amount: draft.amount,
-      label: `Betalning, ${t.customer.value}`,
+      label: L.flow.orderPayment(t.customer.value),
       kind: "in",
       source: "order",
       certainty: "antagande",
-      basis: `Netto ${t.paymentTermDays.value} dagar plus ${t.customerLateDays.value} dagar som historiken visar`,
+      basis: L.flow.orderPaymentBasis(t.paymentTermDays.value, t.customerLateDays.value),
     },
   ];
 }
@@ -183,6 +185,7 @@ export function earliestSafeDate(draft: OrderDraft): string | null {
 
 export function judge(draft: OrderDraft): Judgement {
   const t = ORDER_TEMPLATE;
+  const L = strings();
   const { days, trough } = troughFor(draft);
   const materialCost = Math.round(draft.amount * t.materialShare.value);
   const placed = parseIso(draft.orderDate);
@@ -195,8 +198,8 @@ export function judge(draft: OrderDraft): Judgement {
   if (trough.endCash >= CUSHION) {
     return {
       verdict: "yes",
-      headline: "Ja — lägg ordern",
-      reason: `Kassan bottnar på ${formatSek(trough.endCash, true)} den ${fmtDay(trough.date)}, kvar över kudden hela vägen.`,
+      headline: L.verdict.yes,
+      reason: L.verdict.reasonYes(formatSek(trough.endCash, true), fmtDay(trough.date)),
       earliest: null,
       blocker: null,
       materialCost,
@@ -223,8 +226,8 @@ export function judge(draft: OrderDraft): Judgement {
   if (trough.endCash >= 0) {
     return {
       verdict: "tight",
-      headline: "Ja, men det blir tunt",
-      reason: `Kassan går ner till ${formatSek(trough.endCash, true)} den ${fmtDay(trough.date)}. En sen kund och det brister.`,
+      headline: L.verdict.tight,
+      reason: L.verdict.reasonTight(formatSek(trough.endCash, true), fmtDay(trough.date)),
       earliest,
       blocker,
       materialCost,
@@ -243,8 +246,13 @@ export function judge(draft: OrderDraft): Judgement {
 
   return {
     verdict: "no",
-    headline: earliest ? `Nej — men lägg den ${fmtDay(earliest)}` : "Nej — den ryms inte i år",
-    reason: `Materialet på ${formatSek(materialCost, true)} tar kassan till ${formatSek(trough.endCash, true)} den ${fmtDay(trough.date)}. Kunden betalar först ${fmtDay(paymentDate)}.`,
+    headline: earliest ? L.verdict.noEarliest(fmtDay(earliest)) : L.verdict.noNever,
+    reason: L.verdict.reasonNo(
+      formatSek(materialCost, true),
+      formatSek(trough.endCash, true),
+      fmtDay(trough.date),
+      fmtDay(paymentDate),
+    ),
     earliest,
     blocker,
     materialCost,

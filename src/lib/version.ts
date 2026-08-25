@@ -6,6 +6,8 @@
  * att råka ändra i efterhand, och de följer med i klientbundlen.
  */
 
+import { strings } from "./lang";
+
 declare const __APP_COMMIT__: string;
 declare const __APP_BRANCH__: string;
 declare const __APP_BUILT_AT__: string;
@@ -17,8 +19,8 @@ function read(value: string | undefined, fallback: string): string {
 
 export const BUILD = {
   /** Kort commit-sha, det som identifierar koden. */
-  commit: read(typeof __APP_COMMIT__ === "string" ? __APP_COMMIT__ : undefined, "okänd"),
-  branch: read(typeof __APP_BRANCH__ === "string" ? __APP_BRANCH__ : undefined, "okänd"),
+  commit: read(typeof __APP_COMMIT__ === "string" ? __APP_COMMIT__ : undefined, "?"),
+  branch: read(typeof __APP_BRANCH__ === "string" ? __APP_BRANCH__ : undefined, "?"),
   builtAt: read(typeof __APP_BUILT_AT__ === "string" ? __APP_BUILT_AT__ : undefined, ""),
   /** Byggd med ocommittade ändringar — då säger sha:t inte hela sanningen. */
   dirty: typeof __APP_DIRTY__ === "boolean" ? __APP_DIRTY__ : false,
@@ -39,6 +41,7 @@ export function versionDetail(): string {
         timeStyle: "short",
         timeZone: "Europe/Stockholm",
       })
-    : "okänd tid";
-  return `${BUILD.branch} · ${BUILD.commit}${BUILD.dirty ? " (ocommittat)" : ""} · byggd ${when}`;
+    : strings().build.unknownTime;
+  const L = strings().build;
+  return `${BUILD.branch} · ${BUILD.commit}${BUILD.dirty ? ` (${L.uncommitted})` : ""} · ${L.built} ${when}`;
 }

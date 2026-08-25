@@ -6,6 +6,7 @@ import { TopNav } from "@/components/top-nav";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getFinancials } from "@/lib/data/financials";
 import { fmtDay } from "@/lib/capacity";
+import { useLang, useT } from "@/lib/lang";
 import { availableBalance, toFlows } from "@/lib/data";
 import { TODAY, setLedger } from "@/lib/engine";
 import type { VerdictId } from "@/lib/order";
@@ -14,19 +15,21 @@ import { feedHealthFrom } from "@/lib/sources";
 import { cn, formatSek } from "@/lib/utils";
 
 export const Route = createFileRoute("/ordrar")({
-  head: () => ({ meta: [{ title: "Sikt — Mina ordrar" }] }),
+  head: () => ({ meta: [{ title: "Sikt" }] }),
   loader: async () => ({ financials: await getFinancials() }),
   component: OrdersPage,
 });
 
-const BADGE: Record<VerdictId, { word: string; cls: string }> = {
-  yes: { word: "Höll", cls: "text-clear border-clear/35" },
-  tight: { word: "Tunt", cls: "text-watch border-watch/35" },
-  no: { word: "Trotsad", cls: "text-storm border-storm/35" },
+const BADGE: Record<VerdictId, string> = {
+  yes: "text-clear border-clear/35",
+  tight: "text-watch border-watch/35",
+  no: "text-storm border-storm/35",
 };
 
 function OrdersPage() {
   const { financials } = Route.useLoaderData();
+  const t = useT();
+  useLang();
 
   // Samma reskontra som beslutssidan, satt före render — annars visar topbaren
   // demons saldo när den här sidan är den första man laddar.
@@ -56,9 +59,9 @@ function OrdersPage() {
         <main className="mx-auto max-w-6xl px-5 py-8 md:px-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h1 className="text-xl font-semibold tracking-tight">Mina ordrar</h1>
+              <h1 className="text-xl font-semibold tracking-tight">{t.orders.heading}</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                {orders.length} ordrar · {formatSek(total, true)} i orderstock
+                {t.orders.summary(orders.length, formatSek(total, true))}
               </p>
             </div>
             <Link
@@ -66,38 +69,38 @@ function OrdersPage() {
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-[14px] font-medium text-primary-foreground transition-transform duration-150 hover:translate-y-px"
             >
               <Plus className="size-4" aria-hidden="true" />
-              Ny order
+              {t.orders.newOrder}
             </Link>
           </div>
 
           {orders.length === 0 ? (
             <div className="mt-8 rounded-lg border border-dashed border-line-strong px-6 py-12 text-center">
-              <p className="text-[15px] font-medium text-fg">Blankt papper.</p>
+              <p className="text-[15px] font-medium text-fg">{t.orders.emptyTitle}</p>
               <p className="mx-auto mt-1 max-w-sm text-[13px] text-muted-foreground">
-                Inga ordrar ligger. Pröva en och se om kassan håller innan ni tackar ja.
+                {t.orders.emptyBody}
               </p>
               <Link
                 to="/"
                 className="mt-4 inline-block rounded-md bg-primary px-5 py-2.5 text-[13px] font-medium text-primary-foreground"
               >
-                Pröva en order
+                {t.orders.emptyCta}
               </Link>
             </div>
           ) : (
             <div className="mt-6 overflow-hidden rounded-lg border border-border bg-card">
               <div className="hidden grid-cols-[8rem_1fr_7rem_7rem_6rem_5rem] gap-4 border-b border-border px-4 py-2.5 font-mono text-[10px] tracking-[0.14em] text-subtle uppercase md:grid">
-                <span>Referens</span>
-                <span>Kund</span>
-                <span className="text-right">Ordervärde</span>
-                <span className="text-right">Material</span>
-                <span>Betalas</span>
-                <span className="text-right">Utfall</span>
+                <span>{t.orders.ref}</span>
+                <span>{t.orders.customer}</span>
+                <span className="text-right">{t.orders.amount}</span>
+                <span className="text-right">{t.orders.material}</span>
+                <span>{t.orders.paid}</span>
+                <span className="text-right">{t.orders.outcome}</span>
               </div>
 
               <ul className="divide-y divide-border">
                 {orders.map((o) => {
                   const fresh = o.id === lastId;
-                  const badge = BADGE[o.verdict];
+                  const badgeCls = BADGE[o.verdict];
                   return (
                     <li
                       key={o.id}
@@ -118,7 +121,7 @@ function OrdersPage() {
                           <span className="font-mono text-[12px] text-fg">{o.ref}</span>
                           {fresh ? (
                             <span className="rounded-full bg-clear px-1.5 py-px font-mono text-[9px] tracking-wide text-white uppercase">
-                              ny
+                              {t.orders.fresh}
                             </span>
                           ) : null}
                         </div>
@@ -128,7 +131,7 @@ function OrdersPage() {
                           {o.attachment ? (
                             <Paperclip
                               className="size-3 shrink-0 text-subtle"
-                              aria-label={`Bilaga: ${o.attachment}`}
+                              aria-label={t.orders.attachment(o.attachment)}
                             />
                           ) : null}
                         </div>
@@ -147,17 +150,17 @@ function OrdersPage() {
                           <span
                             className={cn(
                               "inline-block rounded border px-1.5 py-px font-mono text-[10px] tracking-wide uppercase",
-                              badge.cls,
+                              badgeCls,
                             )}
                           >
-                            {badge.word}
+                            {t.orders.badge[o.verdict]}
                           </span>
                         </span>
                       </div>
 
                       {!o.followedAdvice && o.verdict !== "yes" ? (
                         <p className="mt-1.5 text-[11px] text-subtle">
-                          Lagd mot rådet — kassan bottnade på {formatSek(o.trough, true)}.
+                          {t.orders.againstAdvice(formatSek(o.trough, true))}
                         </p>
                       ) : null}
                     </li>

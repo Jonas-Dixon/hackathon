@@ -1,4 +1,5 @@
 import { SourceChip } from "@/components/source-mark";
+import { useT } from "@/lib/lang";
 import type { ApiCall, LiveSnapshot } from "@/lib/live";
 import { cn } from "@/lib/utils";
 
@@ -9,8 +10,9 @@ function when(iso: string) {
 }
 
 function CallRow({ call }: { call: ApiCall }) {
+  const t = useT();
   const code =
-    call.http == null ? (call.locked ? "låst" : "—") : String(call.http);
+    call.http == null ? (call.locked ? t.liveStrip.locked : "—") : String(call.http);
   const tone = call.ok ? "text-clear" : call.locked ? "text-watch" : "text-storm";
 
   return (
@@ -62,6 +64,7 @@ function Column({
 }
 
 export function LiveStrip({ live }: { live: LiveSnapshot }) {
+  const t = useT();
   const opCalls = live.calls.filter((c) => c.source === "op");
   const zgCalls = live.calls.filter((c) => c.source === "zg");
   const zg = live.zg.consents[0];
@@ -70,10 +73,10 @@ export function LiveStrip({ live }: { live: LiveSnapshot }) {
     <section className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <h2 className="text-sm font-medium text-fg">Live anrop</h2>
-          <p className="text-[13px] text-muted">Svaren som nycklarna faktiskt gav. Tomt fält = låst steg.</p>
+          <h2 className="text-sm font-medium text-fg">{t.liveStrip.title}</h2>
+          <p className="text-[13px] text-muted">{t.liveStrip.lede}</p>
         </div>
-        <p className="font-mono text-[10px] text-subtle">hämtad {when(live.fetchedAt)}</p>
+        <p className="font-mono text-[10px] text-subtle">{t.liveStrip.fetchedAt(when(live.fetchedAt))}</p>
       </div>
       <div className="grid gap-3 lg:grid-cols-2">
         <Column
@@ -82,7 +85,7 @@ export function LiveStrip({ live }: { live: LiveSnapshot }) {
           hint={
             live.op.ok
               ? `${live.op.aspspCount} aspsps · ${live.op.scope || "token"}`
-              : live.op.error ?? "Ingen kontakt"
+              : live.op.error ?? t.liveStrip.noContact
           }
           calls={opCalls}
         />
@@ -91,8 +94,8 @@ export function LiveStrip({ live }: { live: LiveSnapshot }) {
           title="Zwapgrid"
           hint={
             live.zg.ok
-              ? `${zg?.name ?? "consent"} · ${zg?.status ?? "tom"}`
-              : live.zg.error ?? "Ingen kontakt"
+              ? `${zg?.name ?? t.liveStrip.consent} · ${zg?.status ?? t.liveStrip.empty}`
+              : live.zg.error ?? t.liveStrip.noContact
           }
           calls={zgCalls}
         />

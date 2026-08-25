@@ -2,13 +2,14 @@ import { DayCapacityInline } from "@/components/capacity-limits";
 import { SourceIcon } from "@/components/source-mark";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  CERTAINTY_LABEL,
-  CERTAINTY_TIP,
-  RISK_LABEL,
+  certaintyLabel,
+  certaintyTip,
+  riskLabel,
   type Certainty,
   type DayPoint,
   type Flow,
 } from "@/lib/engine";
+import { useT } from "@/lib/lang";
 import { cn, formatSek } from "@/lib/utils";
 
 const CERTAINTY_STYLE: Record<Certainty, string> = {
@@ -18,6 +19,7 @@ const CERTAINTY_STYLE: Record<Certainty, string> = {
 };
 
 function EventRow({ flow }: { flow: Flow }) {
+  const t = useT();
   return (
     <li className="flex items-start justify-between gap-3 py-1.5">
       <span className="flex min-w-0 flex-1 flex-col gap-1">
@@ -31,15 +33,15 @@ function EventRow({ flow }: { flow: Flow }) {
                   CERTAINTY_STYLE[flow.certainty],
                 )}
               >
-                {CERTAINTY_LABEL[flow.certainty]}
+                {certaintyLabel(flow.certainty)}
               </span>
             </TooltipTrigger>
             <TooltipContent className="max-w-[17rem]">
               <span className="block font-medium text-foreground">
-                {CERTAINTY_LABEL[flow.certainty]} händelse
+                {t.day.certaintyEvent(certaintyLabel(flow.certainty))}
               </span>
               <span className="mt-0.5 block text-muted-foreground">
-                {CERTAINTY_TIP[flow.certainty]}
+                {certaintyTip(flow.certainty)}
               </span>
               <span className="mt-1.5 block border-t border-border pt-1.5 text-muted-foreground">
                 {flow.basis}
@@ -63,10 +65,11 @@ function EventRow({ flow }: { flow: Flow }) {
 }
 
 export function DayTip({ day }: { day: DayPoint | null }) {
+  const t = useT();
   if (!day) {
     return (
       <div className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-        Välj en dag. Varje post visar hur säker den är.
+        {t.day.empty}
       </div>
     );
   }
@@ -92,14 +95,14 @@ export function DayTip({ day }: { day: DayPoint | null }) {
                 : "text-muted",
           )}
         >
-          {RISK_LABEL[day.risk]}
+          {riskLabel(day.risk)}
         </p>
       </div>
       <p className="mt-1 text-xl font-semibold tabular text-fg">
-        {formatSek(day.endCash)} <span className="text-sm font-normal text-muted">kvar efteråt</span>
+        {formatSek(day.endCash)} <span className="text-sm font-normal text-muted">{t.day.leftAfter}</span>
       </p>
       <p className={cn("mt-0.5 font-mono text-xs tabular", net >= 0 ? "text-clear" : "text-storm")}>
-        Netto {net >= 0 ? "+" : ""}
+        {t.day.netto} {net >= 0 ? "+" : ""}
         {formatSek(net)}
       </p>
       <ul className="mt-2 divide-y divide-border">
@@ -107,7 +110,7 @@ export function DayTip({ day }: { day: DayPoint | null }) {
           <EventRow key={f.label + f.date} flow={f} />
         ))}
         {!rows.length ? (
-          <li className="py-1.5 text-sm text-subtle">Inget bokat den här dagen.</li>
+          <li className="py-1.5 text-sm text-subtle">{t.day.nothingBooked}</li>
         ) : null}
       </ul>
       <DayCapacityInline endCash={day.endCash} />

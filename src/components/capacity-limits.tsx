@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { Cite, SourceRow } from "@/components/cite";
 import { CUSHION, fmtDay, type CapacitySummary, type TimelineDay } from "@/lib/capacity";
 import type { Risk } from "@/lib/engine";
+import { useT } from "@/lib/lang";
 import { cn, formatSek } from "@/lib/utils";
 
 const SEGMENT: Record<Risk, string> = {
@@ -25,6 +26,7 @@ export function CapacityTimeline({
   ceilingDate: string | null;
   compact?: boolean;
 }) {
+  const t = useT();
   const ceilingIdx = ceilingDate ? days.findIndex((d) => d.date === ceilingDate) : -1;
   const ceilingPct = ceilingIdx >= 0 ? (ceilingIdx / (days.length - 1)) * 100 : null;
   const ticks = days
@@ -62,7 +64,7 @@ export function CapacityTimeline({
 
       {compact ? null : (
         <div className="relative mt-0.5 h-4">
-          <span className="absolute left-0 font-mono text-[10px] text-subtle">idag</span>
+          <span className="absolute left-0 font-mono text-[10px] text-subtle">{t.common.today}</span>
           {ceilingPct != null ? (
             <span
               className="absolute -translate-x-1/2 font-mono text-[10px] whitespace-nowrap text-storm"
@@ -88,6 +90,7 @@ export function CapacityNotice({
   summary: CapacitySummary;
   href?: string;
 }) {
+  const t = useT();
   return (
     <section className="rounded-lg border border-border bg-card px-4 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -101,8 +104,8 @@ export function CapacityNotice({
         </h2>
         <p className={cn("font-mono text-[13px] tabular", summary.ok ? "text-muted" : "text-storm")}>
           {summary.ok
-            ? `${formatSek(summary.headroomNow, true)} utrymme`
-            : `${formatSek(summary.shortfall, true)} saknas`}
+            ? t.capacity.headroom(formatSek(summary.headroomNow, true))
+            : t.capacity.shortfall(formatSek(summary.shortfall, true))}
         </p>
       </div>
 
@@ -155,13 +158,14 @@ export function CapacityNotice({
 
 /** Sidopanelens rad. Bara svaret och tidslinjen. */
 export function CapacityMini({ summary }: { summary: CapacitySummary }) {
+  const t = useT();
   return (
     <Link
       to="/utrymme"
       className="block rounded-md border border-border bg-background px-2.5 py-2 transition-colors hover:bg-secondary"
     >
       <span className="flex items-baseline justify-between gap-2">
-        <span className="text-[13px] font-medium text-fg">Utrymme</span>
+        <span className="text-[13px] font-medium text-fg">{t.capacity.cardTitle}</span>
         <span
           className={cn(
             "font-mono text-[11px] tabular",
@@ -175,7 +179,9 @@ export function CapacityMini({ summary }: { summary: CapacitySummary }) {
         <CapacityTimeline days={summary.days} ceilingDate={summary.ceilingDate} compact />
       </span>
       <span className="mt-1.5 block truncate text-[11px] text-muted-foreground">
-        {summary.ceilingDate ? `Taket ${fmtDay(summary.ceilingDate)}` : `${summary.ordersLeft} jobb till`}
+        {summary.ceilingDate
+          ? t.capacity.ceilingAt(fmtDay(summary.ceilingDate))
+          : t.capacity.jobsLeft(summary.ordersLeft)}
       </span>
     </Link>
   );
@@ -183,11 +189,12 @@ export function CapacityMini({ summary }: { summary: CapacitySummary }) {
 
 /** Mikroraden i dagkortet. Så diskret som det går utan att försvinna. */
 export function DayCapacityInline({ endCash }: { endCash: number }) {
+  const t = useT();
   const left = endCash - CUSHION;
   const ok = left > 0;
   return (
     <p className="mt-2.5 flex items-baseline justify-between gap-2 border-t border-border pt-2.5 text-[11px]">
-      <span className="text-subtle">Utrymme kvar efter dagen</span>
+      <span className="text-subtle">{t.capacity.leftAfterDay}</span>
       <span className={cn("font-mono tabular", ok ? "text-muted" : "text-storm")}>
         {ok ? formatSek(left, true) : `−${formatSek(Math.abs(left), true)}`}
       </span>

@@ -1,6 +1,7 @@
 import { CUSHION, fmtDay } from "./capacity";
 import { TODAY, baseFlows, projectWith, type DayPoint, type Flow } from "./engine";
 import { horizonFor, orderFlows, troughWithin, type OrderDraft } from "./order";
+import { strings } from "./lang";
 import { ORDER_TEMPLATE } from "./profile";
 import { addDays, formatSek, iso, parseIso } from "./utils";
 
@@ -86,8 +87,11 @@ function toLever(
     effect: found.solved
       ? found.variant.effect
       : lift === 0
-        ? `Rör inte botten. Hålet ligger ${fmtDay(found.point.date)}, innan några nya pengar hinner in.`
-        : `Lyfter botten ${formatSek(lift, true)}, men ${formatSek(CUSHION - found.point.endCash, true)} fattas fortfarande.`,
+        ? strings().levers.noLift(fmtDay(found.point.date))
+        : strings().levers.partialLift(
+            formatSek(lift, true),
+            formatSek(CUSHION - found.point.endCash, true),
+          ),
     trough: found.point.endCash,
     troughDate: found.point.date,
     solves: found.solved,
@@ -164,18 +168,19 @@ export function levers(draft: OrderDraft): Lever[] {
   if (baseTrough >= CUSHION) return [];
 
   const t = ORDER_TEMPLATE;
+  const L = strings();
   const out: (Lever | null)[] = [];
 
   // 1. Förskott. Kunden betalar en del vid beställning i stället för allt på slutet.
   out.push(
     toLever(
       "deposit",
-      "Förskott",
+      L.levers.deposit,
       search([0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6], draft.orderDate, (share) => {
         const amount = Math.round(draft.amount * share);
         return {
-          ask: `Be ${t.customer.value} om ${pct(share)} förskott — ${formatSek(amount)} vid beställning.`,
-          effect: `Pengarna finns när materialet ska betalas ${fmtDay(material.date)}.`,
+          ask: L.levers.depositAsk(t.customer.value, pct(share), formatSek(amount)),
+          effect: L.levers.depositEffect(fmtDay(material.date)),
           flows: [
             ...others,
             material,
@@ -184,9 +189,9 @@ export function levers(draft: OrderDraft): Lever[] {
               ...payment,
               date: material.date,
               amount,
-              label: `Förskott, ${t.customer.value}`,
+              label: L.levers.depositLabel(t.customer.value),
               certainty: "forutsagbar",
-              basis: `${pct(share)} av ordervärdet, betalas vid beställning`,
+              basis: L.levers.depositBasis(pct(share)),
             },
           ],
         };
@@ -199,13 +204,13 @@ export function levers(draft: OrderDraft): Lever[] {
   out.push(
     toLever(
       "terms",
-      "Kortare villkor",
+      L.levers.terms,
       search([7, 14, 21, 30, 45], draft.orderDate, (days) => {
         const moved = shift(payment, -days);
         if (moved.date <= draft.orderDate) return null;
         return {
-          ask: `Förhandla ner betalningen ${days} dagar — ${fmtDay(moved.date)} i stället för ${fmtDay(payment.date)}.`,
-          effect: `Betalningen hinner in före botten den ${fmtDay(basePoint.date)}.`,
+          ask: L.levers.termsAsk(days, fmtDay(moved.date), fmtDay(payment.date)),
+          effect: L.levers.termsEffect(fmtDay(basePoint.date)),
           flows: [...others, material, moved],
         };
       }),
@@ -217,12 +222,12 @@ export function levers(draft: OrderDraft): Lever[] {
   out.push(
     toLever(
       "material",
-      "Kredit på materialet",
+      L.levers.material,
       search([14, 30, 45, 60], draft.orderDate, (days) => {
         const moved = shift(material, days);
         return {
-          ask: `Be leverantören om ${days} dagars kredit — betala materialet ${fmtDay(moved.date)}.`,
-          effect: `Ordern ligger kvar ${fmtDay(draft.orderDate)}, bara utbetalningen flyttas.`,
+          ask: L.levers.materialAsk(days, fmtDay(moved.date)),
+          effect: L.levers.materialEffect(fmtDay(draft.orderDate)),
           flows: [...others, moved, payment],
         };
       }),
@@ -237,13 +242,21 @@ export function levers(draft: OrderDraft): Lever[] {
     out.push(
       toLever(
         "receivable",
-        "Ring en kund",
+        L.levers.receivable,
         search([7, 14, 21, MAX_PULL_DAYS], draft.orderDate, (days) => {
           const moved = shift(receivable, -days);
           if (moved.date < iso(TODAY)) return null;
           return {
-            ask: `Tidigarelägg ${receivable.label} med ${days} dagar — ${formatSek(receivable.amount)} den ${fmtDay(moved.date)}.`,
-            effect: `Förfaller ${fmtDay(receivable.date)}, alltså efter botten den ${fmtDay(basePoint.date)}.`,
+            ask: L.levers.receivableAsk(
+              receivable.label,
+              days,
+              formatSek(receivable.amount),
+              fmtDay(moved.date),
+            ),
+            effect: L.levers.receivableEffect(
+              fmtDay(receivable.date),
+              fmtDay(basePoint.date),
+            ),
             flows: [...rest, moved, material, payment],
           };
         }),
@@ -259,12 +272,12 @@ export function levers(draft: OrderDraft): Lever[] {
     out.push(
       toLever(
         "payable",
-        "Skjut en faktura",
+        L.levers.payable,
         search([14, 21, 30, MAX_DELAY_DAYS], draft.orderDate, (days) => {
           const moved = shift(payable, days);
           return {
-            ask: `Be om ${days} dagars anstånd på ${payable.label} — ${formatSek(payable.amount)}.`,
-            effect: `Flyttar en utbetalning förbi botten.`,
+            ask: L.levers.payableAsk(days, payable.label, formatSek(payable.amount)),
+            effect: L.levers.payableEffect,
             flows: [...rest, moved, material, payment],
           };
         }),
@@ -298,38 +311,39 @@ export type CeilingRow = {
 /** Ett tänkt uppdrag av storlek `amount`, lagt idag, ovanpå det som redan ligger. */
 function syntheticOrder(amount: number, termDays: number, depositPct: number): Flow[] {
   const t = ORDER_TEMPLATE;
+  const L = strings();
   const materialDate = iso(TODAY);
   const deposit = Math.round(amount * depositPct);
   const flows: Flow[] = [
     {
       date: materialDate,
       amount: Math.round(amount * t.materialShare.value),
-      label: "Material, tänkt order",
+      label: L.flow.plannedMaterial,
       kind: "out",
       source: "order",
       certainty: "fast",
-      basis: `${pct(t.materialShare.value)} av ordervärdet, som på tidigare ordrar`,
+      basis: L.flow.plannedMaterialBasis(pct(t.materialShare.value)),
     },
     {
       // Samma sena betalning som historiken visar — inte villkoret på pappret.
       date: iso(addDays(TODAY, termDays + t.customerLateDays.value)),
       amount: amount - deposit,
-      label: "Betalning, tänkt order",
+      label: L.flow.plannedPayment,
       kind: "in",
       source: "order",
       certainty: "forutsagbar",
-      basis: `Netto ${termDays} dagar plus ${t.customerLateDays.value} dagar som historiken visar`,
+      basis: L.flow.orderPaymentBasis(termDays, t.customerLateDays.value),
     },
   ];
   if (deposit > 0) {
     flows.push({
       date: materialDate,
       amount: deposit,
-      label: "Förskott, tänkt order",
+      label: L.flow.plannedDeposit,
       kind: "in",
       source: "order",
       certainty: "forutsagbar",
-      basis: `${pct(depositPct)} av ordervärdet vid beställning`,
+      basis: L.flow.plannedDepositBasis(pct(depositPct)),
     });
   }
   return flows;

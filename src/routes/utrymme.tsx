@@ -8,35 +8,39 @@ import { baselineCapacity, capacityFor, fmtDay, methodLine } from "@/lib/capacit
 import { CITATIONS, citationFactsFrom, setCitationFacts, type CiteId } from "@/lib/citations";
 import { availableBalance, toFlows } from "@/lib/data";
 import { getFinancials } from "@/lib/data/financials";
-import { COMPANY, SCENARIOS, TODAY, setLedger } from "@/lib/engine";
+import { COMPANY, SCENARIOS, scenarioName, TODAY, setLedger } from "@/lib/engine";
+import { LangToggle } from "@/components/lang-toggle";
+import { useLang, useT } from "@/lib/lang";
 import { cn, formatSek } from "@/lib/utils";
 
 const ALL_CITES = Object.keys(CITATIONS) as CiteId[];
 
 export const Route = createFileRoute("/utrymme")({
-  head: () => ({
-    meta: [{ title: "Sikt — Orderutrymme" }],
-  }),
+  head: () => ({ meta: [{ title: "Sikt" }] }),
   loader: () => getFinancials(),
   component: CapacityPage,
 });
 
 function CapacityPage() {
   const financials = Route.useLoaderData();
+  const t = useT();
+  const lang = useLang();
   setLedger({
     cash: availableBalance(financials.balances),
     flows: toFlows(financials, TODAY, 12),
   });
   setCitationFacts(citationFactsFrom(financials));
 
-  const baseline = useMemo(() => baselineCapacity(), []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- rubrikerna räknas fram ur språkpaketet
+  const baseline = useMemo(() => baselineCapacity(), [lang]);
   const withOrders = useMemo(
     () =>
       SCENARIOS.filter((s) => s.orderAmount > 0).map((s) => ({
         scenario: s,
         summary: capacityFor(s, true),
       })),
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- samma sak här
+    [lang],
   );
 
   return (
@@ -52,20 +56,21 @@ function CapacityPage() {
           </Link>
 
           <header className="mt-8 mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h1 className="text-[17px] font-semibold tracking-tight">Orderutrymme</h1>
+            <h1 className="text-[17px] font-semibold tracking-tight">{t.capacity.heading}</h1>
             <p className="text-[15px] text-muted-foreground">{COMPANY.name}</p>
+            <LangToggle className="ml-auto" />
           </header>
 
           <CapacityNotice summary={baseline} href="/utrymme" />
 
           <section className="mt-10">
-            <h2 className="text-[15px] font-semibold tracking-tight">Om ni tar en order till</h2>
+            <h2 className="text-[15px] font-semibold tracking-tight">{t.capacity.ifOneMore}</h2>
             <div className="mt-3 space-y-5">
               {withOrders.map(({ scenario, summary }) => (
                 <article key={scenario.id}>
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
                     <p className="text-[14px] font-medium text-fg">
-                      {scenario.name}
+                      {scenarioName(scenario.id)}
                       <span className="ml-2 font-mono text-[12px] text-subtle">
                         {formatSek(scenario.orderAmount, true)}
                       </span>
@@ -81,8 +86,8 @@ function CapacityPage() {
                       )}
                     >
                       {summary.ceilingDate
-                        ? `${summary.under ? "Under noll" : "Tunt"} ${fmtDay(summary.ceilingDate)}`
-                        : "Håller hela perioden"}
+                        ? `${summary.under ? t.capacity.belowZero : t.capacity.thin} ${fmtDay(summary.ceilingDate)}`
+                        : t.capacity.holdsWholePeriod}
                     </p>
                   </div>
                   <div className="mt-2">
@@ -99,9 +104,9 @@ function CapacityPage() {
                 className="size-4 transition-transform duration-200 group-open:rotate-90"
                 aria-hidden="true"
               />
-              Källor
+              {t.common.sources}
               <span className="ml-1 font-mono text-[11px] font-normal text-subtle">
-                {ALL_CITES.length} anrop
+                {t.common.calls(ALL_CITES.length)}
               </span>
             </summary>
             <div className="mt-3">
@@ -115,17 +120,14 @@ function CapacityPage() {
                 className="size-4 transition-transform duration-200 group-open:rotate-90"
                 aria-hidden="true"
               />
-              Så räknar vi
+              {t.capacity.method}
             </summary>
             <p className="mt-3 max-w-prose text-sm leading-relaxed text-muted">{methodLine()}</p>
             <p className="mt-3 max-w-prose text-sm leading-relaxed text-muted">
-              Varje post är märkt efter hur säker den är. Fast betyder avtalat belopp och datum.
-              Förutsägbar betyder faktura med förfallodatum, justerad efter hur motparten brukar
-              betala. Antagande betyder att vi räknar med pengarna men att det inte finns någon
-              faktura ännu.
+              {t.capacity.methodCertainty}
             </p>
             <p className="mt-3 max-w-prose text-sm leading-relaxed text-subtle">
-              AI:n är sidekick. Den läser mönster och säger vad den ser. Den fattar inte beslutet.
+              {t.capacity.methodAi}
             </p>
           </details>
         </div>

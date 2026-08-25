@@ -1,5 +1,6 @@
 import { ArrowRight, Check } from "lucide-react";
 import { fmtDay } from "@/lib/capacity";
+import { useT } from "@/lib/lang";
 import type { Lever } from "@/lib/solver";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, formatSek } from "@/lib/utils";
@@ -10,6 +11,7 @@ import { cn, formatSek } from "@/lib/utils";
  * ändringar som inte räcker.
  */
 export function LeverPanel({ levers }: { levers: Lever[] }) {
+  const t = useT();
   if (levers.length === 0) return null;
 
   const works = levers.filter((l) => l.solves);
@@ -18,13 +20,13 @@ export function LeverPanel({ levers }: { levers: Lever[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Vad skulle göra det till ett ja?</CardTitle>
+        <CardTitle>{t.levers.title}</CardTitle>
         <CardDescription>
           {works.length === 0
-            ? "Ingen enskild ändring räcker. Så här långt kommer var och en."
+            ? t.levers.none
             : works.length === 1
-              ? "En sak räcker. Resten gör det bara mindre tight."
-              : `${works.length} av ${levers.length} räcker var för sig.`}
+              ? t.levers.one
+              : t.levers.some(works.length, levers.length)}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -35,7 +37,7 @@ export function LeverPanel({ levers }: { levers: Lever[] }) {
         {falls.length > 0 ? (
           <div className="space-y-3 border-t border-border pt-3">
             <p className="font-mono text-[10px] tracking-[0.16em] text-subtle uppercase">
-              Räcker inte
+              {t.levers.notEnough}
             </p>
             {falls.map((l) => (
               <LeverRow key={l.id} lever={l} />
@@ -44,8 +46,7 @@ export function LeverPanel({ levers }: { levers: Lever[] }) {
         ) : null}
 
         <p className="border-t border-border pt-3 text-[12px] leading-relaxed text-subtle">
-          Siffrorna är samma projektion som ovan, omräknad med en sak ändrad i taget. Vi föreslår
-          — ni förhandlar.
+          {t.levers.footnote}
         </p>
       </CardContent>
     </Card>
@@ -53,6 +54,7 @@ export function LeverPanel({ levers }: { levers: Lever[] }) {
 }
 
 function LeverRow({ lever }: { lever: Lever }) {
+  const t = useT();
   return (
     <article className={cn("flex gap-2.5", !lever.solves && "opacity-70")}>
       <span
@@ -74,7 +76,7 @@ function LeverRow({ lever }: { lever: Lever }) {
               lever.trough < 0 ? "text-storm" : lever.solves ? "text-clear" : "text-watch",
             )}
           >
-            botten {formatSek(lever.trough, true)} · {fmtDay(lever.troughDate)}
+            {t.levers.trough} {formatSek(lever.trough, true)} · {fmtDay(lever.troughDate)}
           </span>
         </div>
         <p className="mt-0.5 text-[13px] leading-relaxed text-muted">{lever.ask}</p>

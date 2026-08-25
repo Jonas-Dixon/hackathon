@@ -1,6 +1,7 @@
 import ShinyText from "@/components/bits/ShinyText";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { FEEDS, type SourceId } from "@/lib/sources";
+import { useT } from "@/lib/lang";
+import { feed as feedOf, type SourceId } from "@/lib/sources";
 import { cn } from "@/lib/utils";
 
 /** Open Payments officiella märke, hämtat från openpayments.io. */
@@ -49,7 +50,7 @@ export function SourceChip({
   id: SourceId;
   showName?: boolean;
 }) {
-  const feed = FEEDS[id];
+  const feed = feedOf(id);
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -77,11 +78,14 @@ export function DataFeedsCompact() {
 }
 
 export function DataFeeds() {
+  const t = useT();
   return (
     <div className="space-y-2 px-3 pb-5">
-      <p className="px-1 font-mono text-[10px] tracking-[0.16em] text-subtle uppercase">Källor</p>
+      <p className="px-1 font-mono text-[10px] tracking-[0.16em] text-subtle uppercase">
+        {t.common.sources}
+      </p>
       {(["bank", "boks"] as const).map((id) => {
-        const f = FEEDS[id];
+        const f = feedOf(id);
         return (
           <Tooltip key={id}>
             <TooltipTrigger asChild>
@@ -120,7 +124,7 @@ export function DataFeeds() {
             <TooltipContent>
               <p className="font-medium">{f.name}</p>
               <p className="mt-0.5 text-muted-foreground">{f.tip}</p>
-              <p className="mt-1 font-mono text-[10px] text-subtle">Synkad {f.synced}</p>
+              <p className="mt-1 font-mono text-[10px] text-subtle">{f.synced}</p>
             </TooltipContent>
           </Tooltip>
         );

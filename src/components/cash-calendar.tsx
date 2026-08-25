@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayTip } from "@/components/day-tip";
-import { CERTAINTY_LABEL, type Certainty, type DayPoint } from "@/lib/engine";
+import { certaintyLabel, type Certainty, type DayPoint } from "@/lib/engine";
+import { useT } from "@/lib/lang";
 import { addDays, cn, formatSek, iso, parseIso } from "@/lib/utils";
 
 const WEEKDAYS = ["M", "T", "O", "T", "F", "L", "S"];
@@ -69,17 +70,18 @@ export function CashCalendar({
 }
 
 function Legend() {
+  const t = useT();
   return (
     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border pt-3">
       {(["fast", "forutsagbar", "antagande"] as const).map((c) => (
         <span key={c} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <span className={cn("size-1.5 rounded-full", DOT[c])} />
-          {CERTAINTY_LABEL[c]}
+          {certaintyLabel(c)}
         </span>
       ))}
       <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
         <span className="h-3 w-px rounded-full bg-storm/45" />
-        Kassan under noll
+        {t.day.belowZero}
       </span>
     </div>
   );
@@ -113,13 +115,14 @@ function MobileCal({
   });
 
   const events = days.filter((d) => hasEvents(d) || markDates[d.date]);
+  const t = useT();
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <button
           type="button"
-          aria-label="Föregående vecka"
+          aria-label={t.day.prevWeek}
           onClick={() => setWeekStart((d) => addDays(d, -7))}
           className="grid size-11 place-items-center rounded-md border border-border"
         >
@@ -128,7 +131,7 @@ function MobileCal({
         <p className="font-mono text-xs tracking-wide text-muted uppercase">{weekLabel(weekStart)}</p>
         <button
           type="button"
-          aria-label="Nästa vecka"
+          aria-label={t.day.nextWeek}
           onClick={() => setWeekStart((d) => addDays(d, 7))}
           className="grid size-11 place-items-center rounded-md border border-border"
         >
@@ -206,14 +209,14 @@ function MobileCal({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm text-fg">
-                    {lead?.label ?? "Inget bokat"}
+                    {lead?.label ?? t.day.nothingBookedShort}
                     {count > 1 ? ` +${count - 1}` : ""}
                   </span>
                   {lead ? (
                     <span className="mt-0.5 flex items-center gap-1.5">
                       <span className={cn("size-1.5 rounded-full", DOT[lead.certainty])} />
                       <span className="text-[11px] text-muted-foreground">
-                        {CERTAINTY_LABEL[lead.certainty]}
+                        {certaintyLabel(lead.certainty)}
                       </span>
                     </span>
                   ) : null}

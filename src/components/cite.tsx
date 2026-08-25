@@ -1,6 +1,7 @@
 import { SourceIcon } from "@/components/source-mark";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cites, STATUS_WORD, type CiteId, type CiteStatus } from "@/lib/citations";
+import { cites, statusWord, type CiteId, type CiteStatus } from "@/lib/citations";
+import { useT } from "@/lib/lang";
 import { cn } from "@/lib/utils";
 
 const DOT: Record<CiteStatus, string> = {
@@ -12,6 +13,7 @@ const DOT: Record<CiteStatus, string> = {
 
 /** Numrerad referens efter ett påstående. Hovra för att se exakt vad det bygger på. */
 export function Cite({ ids }: { ids: CiteId[] }) {
+  useT(); // texten bakom siffran byter språk med resten
   const list = cites(ids);
   return (
     <span className="ml-1 inline-flex gap-0.5 align-baseline">
@@ -27,7 +29,7 @@ export function Cite({ ids }: { ids: CiteId[] }) {
               <span className={cn("size-1.5 shrink-0 rounded-full", DOT[c.status])} />
               <SourceIcon id={c.source} className="size-3 shrink-0" />
               <span className="font-mono text-[10px] tracking-wide text-subtle uppercase">
-                {STATUS_WORD[c.status]}
+                {statusWord(c.status)}
               </span>
             </span>
             <span className="mt-1.5 block font-mono text-[10px] break-words text-muted">{c.call}</span>
@@ -43,6 +45,7 @@ export function Cite({ ids }: { ids: CiteId[] }) {
 
 /** Full referenslista. Varje rad är ett anrop någon kan gå och verifiera själv. */
 export function SourceLedger({ ids }: { ids: CiteId[] }) {
+  useT();
   const list = cites(ids);
   return (
     <ol className="divide-y divide-border">
@@ -57,7 +60,7 @@ export function SourceLedger({ ids }: { ids: CiteId[] }) {
               <span className="font-mono text-[11px] break-all text-muted">{c.call}</span>
               <span className="flex items-center gap-1 font-mono text-[10px] tracking-wide text-subtle uppercase">
                 <span className={cn("size-1.5 rounded-full", DOT[c.status])} />
-                {STATUS_WORD[c.status]}
+                {statusWord(c.status)}
               </span>
             </div>
             <p className="mt-1 font-mono text-[11px] text-subtle">{c.field}</p>
@@ -71,12 +74,14 @@ export function SourceLedger({ ids }: { ids: CiteId[] }) {
 }
 
 /** Källraden under ett svar — Perplexity-mönstret: påståendet först, källorna staplade under. */
-export function SourceRow({ ids, label = "Källor" }: { ids: CiteId[]; label?: string }) {
+export function SourceRow({ ids, label }: { ids: CiteId[]; label?: string }) {
+  const t = useT();
   const list = cites(ids);
+  const heading = label ?? t.common.sources;
   if (!list.length) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="font-mono text-[10px] tracking-[0.16em] text-subtle uppercase">{label}</span>
+      <span className="font-mono text-[10px] tracking-[0.16em] text-subtle uppercase">{heading}</span>
       {list.map((c) => (
         <Tooltip key={c.id}>
           <TooltipTrigger asChild>

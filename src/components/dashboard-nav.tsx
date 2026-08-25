@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { CalendarClock, FileText, Landmark, Lock, PieChart, Receipt } from "lucide-react";
 import type { ComponentType } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { DATA_MODE, MODE_LABEL } from "@/lib/profile";
+import { DATA_MODE, modeLabel } from "@/lib/profile";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -89,7 +89,7 @@ export function DataModeBadge() {
               DATA_MODE === "live" ? "bg-clear" : "bg-subtle",
             )}
           />
-          {MODE_LABEL[DATA_MODE]}
+          {modeLabel(DATA_MODE)}
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-[18rem]">

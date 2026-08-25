@@ -1,5 +1,6 @@
 import { OpenPaymentsMark, ZwapgridMark } from "@/components/source-mark";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useT } from "@/lib/lang";
 import type { FeedHealth } from "@/lib/sources";
 import { cn } from "@/lib/utils";
 
@@ -13,28 +14,29 @@ export function ProviderBar({
   compact?: boolean;
   health?: FeedHealth;
 }) {
+  const t = useT();
   const items = [
     {
       id: "bank" as const,
       Mark: OpenPaymentsMark,
       name: "Open Payments",
-      role: "Saldo och transaktioner",
+      role: t.providers.bankRole,
       href: "https://www.openpayments.io/",
       box: "h-3.5 w-[5.7ch]",
       ok: health?.bank ?? false,
-      tipOk: "Saldo hämtat från banken.",
-      tipOff: "Ingen data från banken.",
+      tipOk: t.providers.bankOk,
+      tipOff: t.providers.bankOff,
     },
     {
       id: "boks" as const,
       Mark: ZwapgridMark,
       name: "Zwapgrid",
-      role: "Fakturor och förfallodatum",
+      role: t.providers.booksRole,
       href: "https://www.zwapgrid.com/",
       box: "h-4 w-[2.6ch]",
       ok: health?.boks ?? false,
-      tipOk: "Fakturor hämtade från bokföringen.",
-      tipOff: "Ingen data från bokföringen.",
+      tipOk: t.providers.booksOk,
+      tipOff: t.providers.booksOff,
     },
   ];
 
@@ -69,7 +71,7 @@ export function ProviderBar({
 
   return (
     <div className={cn("flex flex-wrap items-center gap-x-6 gap-y-3", className)}>
-      <p className="font-mono text-[10px] tracking-[0.2em] text-subtle uppercase">Byggd på</p>
+      <p className="font-mono text-[10px] tracking-[0.2em] text-subtle uppercase">{t.providers.builtOn}</p>
       {items.map(({ id, Mark, name, role, href, box, ok }) => (
         <a
           key={id}
@@ -83,7 +85,7 @@ export function ProviderBar({
             <span className="flex items-center gap-1.5">
               <span className="text-[13px] font-medium text-fg">{name}</span>
               <span className={cn("size-1.5 rounded-full", ok ? "bg-clear" : "bg-subtle")} />
-              <span className="font-mono text-[10px] text-subtle">{ok ? "Live" : "Saknas"}</span>
+              <span className="font-mono text-[10px] text-subtle">{ok ? t.common.live : t.common.missing}</span>
             </span>
             <span className="block text-[11px] text-muted-foreground">{role}</span>
           </span>

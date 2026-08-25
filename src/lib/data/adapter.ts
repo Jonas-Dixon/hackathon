@@ -1,4 +1,5 @@
 import type { Certainty, Flow } from "../engine.ts";
+import { strings } from "../lang/index.ts";
 import { addDays, iso, parseIso } from "../utils.ts";
 import type {
   AisBalance,
@@ -62,35 +63,40 @@ function invoiceFlow(inv: BookkeepingInvoice, habitDays: number): Flow {
   // vi antar inte att vi själva betalar sent.
   const date = incoming ? iso(addDays(parseIso(inv.dueDate), habitDays)) : inv.dueDate;
   const certainty: Certainty = incoming && habitDays > 7 ? "antagande" : "forutsagbar";
+  const L = strings().flow;
 
   return {
     date,
     amount: inv.amount,
-    label: `${incoming ? "Betalning" : "Faktura"}, ${inv.party}`,
+    label: incoming ? L.invoiceIn(inv.party) : L.invoiceOut(inv.party),
     kind: incoming ? "in" : "out",
     source: "boks",
     certainty,
     basis: incoming
       ? habitDays > 0
-        ? `Förfaller ${inv.dueDate}, men ${inv.party} betalar i snitt ${habitDays} dagar sent`
-        : `Förfaller ${inv.dueDate}, betalas normalt i tid`
-      : `Leverantörsfaktura ${inv.id}, förfaller ${inv.dueDate}`,
+        ? L.invoiceInLate(inv.dueDate, inv.party, habitDays)
+        : L.invoiceInOnTime(inv.dueDate)
+      : L.invoiceOutBasis(inv.id, inv.dueDate),
   };
 }
 
 function recurringFlows(cost: RecurringCost, from: Date, months: number): Flow[] {
   const out: Flow[] = [];
+  const L = strings().flow;
+  // Källan skriver etiketten på sitt eget språk. Kategorin gör den läsbar på
+  // läsarens — bara "other" saknar en och får behålla källans text.
+  const label = cost.category === "other" ? cost.label : L.recurring[cost.category];
   for (let m = 0; m < months; m++) {
     const d = new Date(from.getFullYear(), from.getMonth() + m, cost.dayOfMonth);
     if (d < from) continue;
     out.push({
       date: iso(d),
       amount: cost.amount,
-      label: cost.label,
+      label,
       kind: "out",
       source: "boks",
       certainty: CERTAINTY_BY_CATEGORY[cost.category],
-      basis: `Återkommande post, dras den ${cost.dayOfMonth}:e varje månad`,
+      basis: L.recurringBasis(cost.dayOfMonth),
     });
   }
   return out;

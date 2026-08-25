@@ -1,18 +1,15 @@
 import { Link } from "@tanstack/react-router";
 import { RotateCcw } from "lucide-react";
 import { useState } from "react";
+import { LangToggle } from "@/components/lang-toggle";
 import { ProviderBar } from "@/components/providers";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { currentCash } from "@/lib/engine";
+import { useT } from "@/lib/lang";
 import { useOrders } from "@/lib/orders-store";
 import { COMPANY_PROFILE } from "@/lib/profile";
 import type { FeedHealth } from "@/lib/sources";
 import { cn, formatSek } from "@/lib/utils";
-
-const LINKS = [
-  { to: "/", label: "Nytt orderbeslut" },
-  { to: "/ordrar", label: "Mina ordrar" },
-];
 
 export function TopNav({
   current,
@@ -26,6 +23,11 @@ export function TopNav({
   const resetDemo = useOrders((s) => s.resetDemo);
   const count = useOrders((s) => s.orders.length);
   const [spinning, setSpinning] = useState(false);
+  const t = useT();
+  const links = [
+    { to: "/", label: t.nav.newOrder },
+    { to: "/ordrar", label: t.nav.myOrders },
+  ];
 
   function reset() {
     setSpinning(true);
@@ -43,7 +45,7 @@ export function TopNav({
         </div>
 
         <nav className="flex items-center gap-1">
-          {LINKS.map((l) => {
+          {links.map((l) => {
             const active = l.to === current;
             return (
               <Link
@@ -67,6 +69,7 @@ export function TopNav({
 
         <div className="ml-auto flex items-center gap-3">
           <ProviderBar compact health={health} />
+          <LangToggle />
           {/* Samma saldo som projektionen räknar på — en siffra får inte säga
               en sak i topbaren och en annan i svaret. */}
           <span className="hidden font-mono text-[13px] tabular text-muted-foreground sm:inline">
@@ -84,12 +87,10 @@ export function TopNav({
                   className={cn("size-3", spinning && "animate-[spin_600ms_linear_1]")}
                   aria-hidden="true"
                 />
-                Demo
+                {t.nav.demo}
               </button>
             </TooltipTrigger>
-            <TooltipContent>
-              Nollställ demon — tömmer dina ordrar och börjar om på blankt papper.
-            </TooltipContent>
+            <TooltipContent>{t.nav.resetTip}</TooltipContent>
           </Tooltip>
         </div>
       </div>

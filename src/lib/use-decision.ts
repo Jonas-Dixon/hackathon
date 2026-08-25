@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useLang } from "./lang";
 import { defaultDraft, judge, type OrderDraft } from "./order";
 import { useOrders } from "./orders-store";
 import { ORDER_TEMPLATE } from "./profile";
@@ -10,6 +11,8 @@ export function useDecision() {
   const [draft, setDraft] = useState<OrderDraft>(() => defaultDraft());
   const [step, setStep] = useState<Step>("ask");
   const [placed, setPlaced] = useState(false);
+  // Domen är text lika mycket som siffror — byter språket måste den räknas om.
+  const lang = useLang();
   // Inte på frågesidan — earliestSafeDate skannar 120 projektioner och fryser klicket.
   const verdict = useMemo(() => {
     if (step === "ask" && !placed) return null;
@@ -19,7 +22,8 @@ export function useDecision() {
       console.error("[sikt] judge failed", err);
       return null;
     }
-  }, [draft, step, placed]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- judge() läser språket via strings()
+  }, [draft, step, placed, lang]);
   const addOrder = useOrders((s) => s.add);
 
   return {

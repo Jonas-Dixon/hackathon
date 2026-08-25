@@ -2,16 +2,18 @@ import { Cite, SourceRow } from "@/components/cite";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ScenarioId } from "@/lib/engine";
 import { triangulate, type Finding } from "@/lib/cross";
+import { useT } from "@/lib/lang";
 import { cn } from "@/lib/utils";
 
-const MARK: Record<Finding["tone"], { word: string; dot: string; text: string }> = {
-  storm: { word: "Stoppa", dot: "bg-storm", text: "text-storm" },
-  watch: { word: "Justerat", dot: "bg-watch", text: "text-watch" },
-  clear: { word: "Löst", dot: "bg-clear", text: "text-clear" },
-  gap: { word: "Lucka", dot: "bg-subtle", text: "text-muted" },
+const MARK: Record<Finding["tone"], { dot: string; text: string }> = {
+  storm: { dot: "bg-storm", text: "text-storm" },
+  watch: { dot: "bg-watch", text: "text-watch" },
+  clear: { dot: "bg-clear", text: "text-clear" },
+  gap: { dot: "bg-subtle", text: "text-muted" },
 };
 
 function FindingCard({ finding }: { finding: Finding }) {
+  const t = useT();
   const mark = MARK[finding.tone];
   return (
     <article className="border-b border-border pb-4 last:border-b-0 last:pb-0">
@@ -19,7 +21,7 @@ function FindingCard({ finding }: { finding: Finding }) {
         <h3 className="text-[15px] font-medium text-fg">{finding.title}</h3>
         <span className={cn("flex shrink-0 items-center gap-1.5 font-mono text-[10px] tracking-wide uppercase", mark.text)}>
           <span className={cn("size-1.5 rounded-full", mark.dot)} />
-          {mark.word}
+          {t.cross.mark[finding.tone]}
         </span>
       </div>
 
@@ -45,14 +47,15 @@ function FindingCard({ finding }: { finding: Finding }) {
 }
 
 export function CrossBoard({ scenarioId }: { scenarioId: ScenarioId }) {
+  const t = useT();
   const findings = triangulate(scenarioId);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Fynd</CardTitle>
+        <CardTitle>{t.cross.title}</CardTitle>
         <CardDescription>
-          Bankens transaktioner mot bokföringens fakturor. {findings.length} saker att veta.
+          {t.cross.desc(findings.length)}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

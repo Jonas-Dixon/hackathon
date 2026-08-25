@@ -1,3 +1,5 @@
+import { strings } from "./lang";
+
 export type SourceId = "bank" | "boks" | "order";
 export type FeedStatus = "live" | "lag" | "model";
 
@@ -15,55 +17,40 @@ export function feedHealthFrom(snapshot: {
   };
 }
 
-export const FEEDS: Record<
-  SourceId,
-  {
-    id: SourceId;
-    name: string;
-    short: string;
-    href: string;
-    role: string;
-    status: FeedStatus;
-    statusLabel: string;
-    synced: string;
-    coverage: number;
-    tip: string;
-  }
-> = {
-  bank: {
-    id: "bank",
-    name: "Open Payments",
-    short: "Bank",
-    href: "https://www.openpayments.io/",
-    role: "AIS + PIS · Danske ORGA",
-    status: "live",
-    statusLabel: "Live",
-    synced: "2 min sedan",
-    coverage: 0.82,
-    tip: "accountinformation + paymentinitiation + bankgiroinformation. Saldo (interimAvailable), transaktioner, swedish-giro. Live just nu.",
-  },
-  boks: {
-    id: "boks",
-    name: "Zwapgrid",
-    short: "Böcker",
-    href: "https://www.zwapgrid.com/",
-    role: "Fakturor, lön, leverantör",
-    status: "lag",
-    statusLabel: "Släpar",
-    synced: "4 dagar sedan",
-    coverage: 0.61,
-    tip: "Bokföringen, via Zwapgrid. Fakturor och lön. Senast för 4 dagar sen — därför 61%.",
-  },
-  order: {
-    id: "order",
-    name: "Ordern",
-    short: "Order",
-    href: "#",
-    role: "Scenario, inte live",
-    status: "model",
-    statusLabel: "Scenario",
-    synced: "inmatad nu",
-    coverage: 1,
-    tip: "Ordern du testar. Inte från banken eller böckerna.",
-  },
+export type Feed = {
+  id: SourceId;
+  name: string;
+  short: string;
+  href: string;
+  role: string;
+  status: FeedStatus;
+  statusLabel: string;
+  synced: string;
+  coverage: number;
+  tip: string;
 };
+
+/** Strukturen. Texten — roll, status, tips — kommer ur språkpaketet. */
+const SHAPE: Record<SourceId, { name: string | null; href: string; status: FeedStatus; coverage: number }> = {
+  bank: { name: "Open Payments", href: "https://www.openpayments.io/", status: "live", coverage: 0.82 },
+  boks: { name: "Zwapgrid", href: "https://www.zwapgrid.com/", status: "lag", coverage: 0.61 },
+  order: { name: null, href: "#", status: "model", coverage: 1 },
+};
+
+export function feed(id: SourceId): Feed {
+  const shape = SHAPE[id];
+  const L = strings().feeds[id];
+  return {
+    id,
+    // Open Payments och Zwapgrid heter så på båda språken. "Ordern" gör det inte.
+    name: shape.name ?? (L as { name: string }).name,
+    short: L.short,
+    href: shape.href,
+    role: L.role,
+    status: shape.status,
+    statusLabel: L.statusLabel,
+    synced: L.synced,
+    coverage: shape.coverage,
+    tip: L.tip,
+  };
+}

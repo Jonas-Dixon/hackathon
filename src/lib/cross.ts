@@ -1,5 +1,6 @@
 import type { CiteId } from "./citations";
 import type { ScenarioId } from "./engine";
+import { strings } from "./lang";
 import { ATLAS_GIRO_NEW, ATLAS_GIRO_OLD } from "./open-payments";
 
 /** Shaped like Open Payments AIS (PSD2) + Zwapgrid supplier/customer invoices. */
@@ -187,6 +188,7 @@ function daysBetween(a: string, b: string) {
 }
 
 export function triangulate(scenarioId: ScenarioId): Finding[] {
+  const L = strings().cross;
   const findings: Finding[] = [];
 
   const atlasPaid = BANK_TX.filter((t) => t.creditorName === "Atlas Copco" && t.amount < 0);
@@ -196,19 +198,19 @@ export function triangulate(scenarioId: ScenarioId): Finding[] {
     findings.push({
       id: "iban",
       tone: "storm",
-      title: "Leverantören har bytt konto",
+      title: L.ibanTitle,
       claim: [
         {
-          text: `Atlas Copco har fått ${atlasPaid.length} betalningar från er, alla till bankgiro ${ATLAS_GIRO_OLD}.`,
+          text: L.ibanClaim1(atlasPaid.length, ATLAS_GIRO_OLD),
           cites: ["op-tx-atlas"],
         },
         {
-          text: `Den nya fakturan på ${Math.round(newInv.amount / 1000)} 000 kr pekar på ${ATLAS_GIRO_NEW}.`,
+          text: L.ibanClaim2(`${Math.round(newInv.amount / 1000)} 000 kr`, ATLAS_GIRO_NEW),
           cites: ["zg-sinv-atlas"],
         },
-        { text: "Samma leverantör, nytt konto, ingen förvarning." },
+        { text: L.ibanClaim3 },
       ],
-      action: "Betalningen hålls tillbaka tills någon ringt Atlas och bekräftat.",
+      action: L.ibanAction,
       cites: ["op-tx-atlas", "zg-sinv-atlas", "op-pis-held"],
     });
   }
@@ -220,18 +222,18 @@ export function triangulate(scenarioId: ScenarioId): Finding[] {
     findings.push({
       id: "late",
       tone: "watch",
-      title: "Müller betalar sent varje gång",
+      title: L.lateTitle,
       claim: [
         {
-          text: `${muller.length} tidigare fakturor är betalda i snitt ${avg} dagar efter förfallodatum.`,
+          text: L.lateClaim1(muller.length, avg),
           cites: ["zg-cinv-muller", "op-tx-muller"],
         },
         {
-          text: `Ordern är skriven på 60 dagar, så vi räknar med ${60 + avg} i stället.`,
+          text: L.lateClaim2(60 + avg),
           cites: ["model-order"],
         },
       ],
-      action: "Prognosen använder det senare datumet. Inget antagande om tyska bolag — tre matchade betalningar.",
+      action: L.lateAction,
       cites: ["zg-cinv-muller", "op-tx-muller"],
     });
   }
@@ -245,22 +247,22 @@ export function triangulate(scenarioId: ScenarioId): Finding[] {
 
   if (namelessHits.length) {
     const first = namelessHits[0];
-    const extra = namelessHits.length > 1 ? ` +${namelessHits.length - 1} till` : "";
+    const extra = namelessHits.length > 1 ? L.namelessMore(namelessHits.length - 1) : "";
     findings.push({
       id: "nameless",
       tone: "clear",
-      title: "Namnlös inbetalning identifierad",
+      title: L.namelessTitle,
       claim: [
         {
-          text: `${Math.round(first.tx.amount / 1000)} 000 kr kommer in utan avsändarnamn — banken lämnar fältet tomt.`,
+          text: L.namelessClaim1(`${Math.round(first.tx.amount / 1000)} 000 kr`),
           cites: ["op-tx-nameless"],
         },
         {
-          text: `Beloppet matchar en obetald faktura från ${first.hit.party}${extra}.`,
+          text: L.namelessClaim2(first.hit.party, extra),
           cites: ["zg-cinv-abetong"],
         },
       ],
-      action: "Vi fyller luckan från böckerna och säger att vi gjort det, i stället för att bara visa ett belopp.",
+      action: L.namelessAction,
       cites: ["op-tx-nameless", "zg-cinv-abetong"],
     });
   }
@@ -268,15 +270,15 @@ export function triangulate(scenarioId: ScenarioId): Finding[] {
   findings.push({
     id: "lag",
     tone: "gap",
-    title: "Böckerna släpar fyra dagar",
+    title: L.lagTitle,
     claim: [
-      { text: "Banken svarar i realtid.", cites: ["op-aspsp"] },
+      { text: L.lagClaim1, cites: ["op-aspsp"] },
       {
-        text: "Bokföringen synkades senast 16 november, så lön och färska leverantörsfakturor kan saknas.",
+        text: L.lagClaim2,
         cites: ["zg-lag", "zg-consent"],
       },
     ],
-    action: "Svaret blir sämre, inte blankt: när böckerna tystnar räknar vi vidare på bankens siffror.",
+    action: L.lagAction,
     cites: ["zg-lag", "op-aspsp"],
   });
 

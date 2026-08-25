@@ -1,4 +1,5 @@
 import type { FinancialSnapshot } from "./data/contracts";
+import { strings } from "./lang";
 import type { SourceId } from "./sources";
 
 /**
@@ -55,142 +56,114 @@ const ORDER: CiteId[] = [
 
 type CitationSeed = Omit<Citation, "num">;
 
-const SEEDS: Record<CiteId, CitationSeed> = {
+/**
+ * Formen på beviset: vilket anrop, vilken källa, hur färskt det är.
+ *
+ * Texten — fält, värde, notering — bor i språkpaketet, för den är det enda i
+ * raden en människa faktiskt läser. Anropen är API-strängar och står som de är
+ * på båda språken.
+ */
+type CitationShape = { id: CiteId; source: SourceId; call: string; status: CiteStatus };
+
+const SHAPES: Record<CiteId, CitationShape> = {
   "op-balance": {
     id: "op-balance",
     source: "bank",
     call: "GET /psd2/accountinformation/v1/accounts/{id}/balances",
-    field: "balances[0].balanceAmount · interimAvailable",
-    value: "418 400 SEK",
-    note: "Saldot vi räknar från. Tillgängligt, inte bokfört — betalningar på väg ut är redan avdragna.",
     status: "live",
   },
   "op-aspsp": {
     id: "op-aspsp",
     source: "bank",
     call: "GET /psd2/aspspinformation/v1/aspsps?country=SE",
-    field: "aspsps.length",
-    value: "111 banker",
-    note: "Anropet gick igenom skarpt mot sandboxen. Det är beviset på att nyckeln lever.",
     status: "live",
   },
   "op-tx-atlas": {
     id: "op-tx-atlas",
     source: "bank",
     call: "GET /psd2/accountinformation/v1/accounts/{id}/transactions",
-    field: "booked[] · creditorAccount.bankgiro",
-    value: "4 betalningar → 5051-9071",
-    note: "Fyra tidigare utbetalningar till Atlas Copco, alla till samma bankgiro.",
     status: "live",
   },
   "op-tx-muller": {
     id: "op-tx-muller",
     source: "bank",
     call: "GET /psd2/accountinformation/v1/accounts/{id}/transactions",
-    field: "booked[] · bookingDate",
-    value: "3 inbetalningar från Müller",
-    note: "Datumen pengarna faktiskt landade. Matchas mot förfallodatum i böckerna.",
     status: "live",
   },
   "op-tx-nameless": {
     id: "op-tx-nameless",
     source: "bank",
     call: "GET /psd2/accountinformation/v1/accounts/{id}/transactions",
-    field: "booked[].creditorName",
-    value: "null",
-    note: "PSD2 kräver inte ifyllt namn. Banken vet beloppet men inte vem — luckan fylls från böckerna.",
     status: "live",
   },
   "op-accounts-locked": {
     id: "op-accounts-locked",
     source: "bank",
     call: "GET /psd2/accountinformation/v1/accounts",
-    field: "consentStatus",
-    value: "received — väntar SCA",
-    note: "Saldo och transaktioner är låsta tills någon signerar med BankID. Siffrorna i demon är därför modellerade på riktig svarsform.",
     status: "locked",
   },
   "op-pis-held": {
     id: "op-pis-held",
     source: "bank",
     call: "POST /psd2/payments/v1/swedish-giro",
-    field: "transactionStatus",
-    value: "held",
-    note: "Betalningen skickas inte förrän kontot stämmer mot betalhistoriken.",
     status: "locked",
   },
   "zg-consent": {
     id: "zg-consent",
     source: "boks",
     call: "GET /consents/api/v1/consents",
-    field: "data[0].status · data[0].source",
-    value: "CREATED · null",
-    note: "Samtycket finns men bokföringssystemet är inte kopplat än, så fakturaanropen ger 403.",
     status: "locked",
   },
   "zg-sinv-atlas": {
     id: "zg-sinv-atlas",
     source: "boks",
     call: "GET /accounting/api/v1/consents/{id}/supplierinvoices",
-    field: "SINV-ATLAS-NEW · dueDate, amount, bankgiro",
-    value: "2 dec · 520 000 SEK · 5822-1104",
-    note: "Leverantörsfakturan för materialet. Bankgirot skiljer sig från de fyra tidigare betalningarna.",
     status: "lag",
   },
   "zg-cinv-muller": {
     id: "zg-cinv-muller",
     source: "boks",
     call: "GET /accounting/api/v1/consents/{id}/customerinvoices",
-    field: "3 fakturor · dueDate mot paidDate",
-    value: "snitt 23 dagar sent",
-    note: "Tre betalda Müller-fakturor. Skillnaden mellan förfallodatum och betaldatum är mätt, inte gissad.",
     status: "lag",
   },
   "zg-cinv-abetong": {
     id: "zg-cinv-abetong",
     source: "boks",
     call: "GET /accounting/api/v1/consents/{id}/customerinvoices",
-    field: "CINV-ABETONG · party, amount",
-    value: "Abetong AB · 140 000 SEK",
-    note: "Ger namnet till den namnlösa inbetalningen i banken.",
     status: "lag",
   },
-  "zg-lag": {
-    id: "zg-lag",
-    source: "boks",
-    call: "GET /consents/api/v1/consents",
-    field: "data[0].createdOn",
-    value: "senast synkad 16 nov",
-    note: "Böckerna släpar fyra dagar. Lön och färska leverantörsfakturor kan saknas.",
-    status: "lag",
-  },
-  "model-payroll": {
-    id: "model-payroll",
-    source: "boks",
-    call: "Modell · återkommande poster",
-    field: "lön den 25:e · 187 200 SEK",
-    value: "3 månader framåt",
-    note: "Avtalad post med känt datum och belopp. Rullas framåt tills böckerna säger annat.",
-    status: "model",
-  },
-  "model-order": {
-    id: "model-order",
-    source: "order",
-    call: "Modell · ordern du testar",
-    field: "orderAmount, materialCost, betaldatum",
-    value: "inmatad i scenariot",
-    note: "Kommer varken från banken eller böckerna. Det är hypotesen vi räknar på.",
-    status: "model",
-  },
+  "zg-lag": { id: "zg-lag", source: "boks", call: "GET /consents/api/v1/consents", status: "lag" },
+  "model-payroll": { id: "model-payroll", source: "boks", call: "", status: "model" },
+  "model-order": { id: "model-order", source: "order", call: "", status: "model" },
 };
 
-export const CITATIONS: Record<CiteId, Citation> = ORDER.reduce(
+function seed(id: CiteId): CitationSeed {
+  const shape = SHAPES[id];
+  const text = strings().cite[id];
+  return {
+    ...shape,
+    // Modellraderna har ingen URL — där är anropet en mening, och den översätts.
+    call: "call" in text ? (text.call as string) : shape.call,
+    field: text.field,
+    value: text.value,
+    note: text.note,
+  };
+}
+
+/** Numret är fast och globalt — [3] betyder samma sak överallt, på båda språken. */
+export const CITE_NUM: Record<CiteId, number> = ORDER.reduce(
   (acc, id, i) => {
-    acc[id] = { ...SEEDS[id], num: i + 1 };
+    acc[id] = i + 1;
     return acc;
   },
-  {} as Record<CiteId, Citation>,
+  {} as Record<CiteId, number>,
 );
+
+function citation(id: CiteId): Citation {
+  return { ...seed(id), num: CITE_NUM[id] };
+}
+
+export const CITATIONS: Record<CiteId, unknown> = SHAPES;
 
 /**
  * Vad körningen faktiskt fick tillbaka, ovanpå fröna.
@@ -206,7 +179,7 @@ export function setCitationFacts(next: Partial<Record<CiteId, Partial<CitationSe
 }
 
 export function cites(ids: CiteId[]): Citation[] {
-  return ids.map((id) => ({ ...CITATIONS[id], ...live[id] })).sort((a, b) => a.num - b.num);
+  return ids.map((id) => ({ ...citation(id), ...live[id] })).sort((a, b) => a.num - b.num);
 }
 
 /** Beviset för saldot, hämtat ur det snapshot prognosen faktiskt räknade på. */
@@ -220,33 +193,31 @@ export function citationFactsFrom(
     return {
       "op-balance": {
         value: balance ? `${balance.amount.toLocaleString("sv-SE")} SEK` : "—",
-        note: "Banken svarade inte. Siffran är angiven, inte hämtad — därför räknas den som en lucka.",
+        note: strings().cite.noBank,
         status: "locked",
       },
     };
   }
 
+  const L = strings().cite;
   return {
     "op-balance": {
       call: `GET /psd2/accountinformation/v1/accounts/${account.resourceId}/balances`,
       field: `balances[0].balanceAmount · ${balance.balanceType}`,
       value: `${balance.amount.toLocaleString("sv-SE")} ${balance.currency}`,
-      note: `Saldot vi räknar från, hämtat ur ${account.name ?? account.resourceId} den ${balance.referenceDate}.`,
+      note: L.balanceFrom(account.name ?? account.resourceId, balance.referenceDate),
       status: "live",
     },
     "op-accounts-locked": {
       call: "GET /psd2/accountinformation/v1/accounts?withBalance=true",
-      field: "accounts.length · valt konto",
-      value: `${snapshot.accounts.length} konton · ${account.resourceId}`,
-      note: `Samtycket räcker för att läsa konton. Vi räknar på företagskontot ${account.iban ?? account.resourceId}.`,
+      field: L.accountsField,
+      value: L.accountsValue(snapshot.accounts.length, account.resourceId),
+      note: L.accountsNote(account.iban ?? account.resourceId),
       status: "live",
     },
   };
 }
 
-export const STATUS_WORD: Record<CiteStatus, string> = {
-  live: "Live",
-  lag: "Släpar",
-  locked: "Låst",
-  model: "Modell",
-};
+export function statusWord(status: CiteStatus): string {
+  return strings().citeStatus[status];
+}

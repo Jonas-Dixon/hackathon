@@ -3,6 +3,7 @@ import { useState } from "react";
 import { SourceIcon } from "@/components/source-mark";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { fmtDay } from "@/lib/capacity";
+import { useT } from "@/lib/lang";
 import type { Judgement, OrderDraft } from "@/lib/order";
 import { ORDER_TEMPLATE } from "@/lib/profile";
 import { cn, formatSek } from "@/lib/utils";
@@ -20,7 +21,8 @@ export function OrderBrief({
   verdict: Judgement;
   className?: string;
 }) {
-  const t = ORDER_TEMPLATE;
+  const tpl = ORDER_TEMPLATE;
+  const t = useT();
   const [file, setFile] = useState<string | null>(null);
   const [notice, setNotice] = useState(false);
 
@@ -28,23 +30,23 @@ export function OrderBrief({
   const marginPct = draft.amount ? Math.round((margin / draft.amount) * 100) : 0;
 
   const rows: Array<{ k: string; v: string; sub?: string; source?: "bank" | "boks" | "order" }> = [
-    { k: "Kund", v: t.customer.value, sub: t.customerCountry, source: "boks" },
+    { k: t.brief.customer, v: tpl.customer.value, sub: tpl.customerCountry, source: "boks" },
     {
-      k: "Material",
+      k: t.brief.material,
       v: formatSek(verdict.materialCost),
-      sub: `${Math.round(t.materialShare.value * 100)} % · betalas ${fmtDay(draft.orderDate)}`,
+      sub: t.brief.materialSub(Math.round(tpl.materialShare.value * 100), fmtDay(draft.orderDate)),
       source: "boks",
     },
     {
-      k: "Täckningsbidrag",
+      k: t.brief.margin,
       v: formatSek(margin),
-      sub: `${marginPct} % av ordervärdet`,
+      sub: t.brief.marginSub(marginPct),
       source: "order",
     },
     {
-      k: "Betalning in",
+      k: t.brief.payment,
       v: formatSek(draft.amount),
-      sub: `netto ${t.paymentTermDays.value} d, väntas ${fmtDay(verdict.paymentDate)}`,
+      sub: t.brief.paymentSub(tpl.paymentTermDays.value, fmtDay(verdict.paymentDate)),
       source: "bank",
     },
   ];
@@ -60,10 +62,10 @@ export function OrderBrief({
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 className="flex items-center gap-2 text-[14px] font-medium text-fg">
           <FileText className="size-3.5 text-subtle" aria-hidden="true" />
-          Vad ordern är
+          {t.brief.title}
         </h2>
         <p className="font-mono text-[11px] tabular text-subtle">
-          {formatSek(draft.amount)} exkl. moms
+          {formatSek(draft.amount)} {t.common.exclVat}
         </p>
       </div>
 
@@ -95,18 +97,16 @@ export function OrderBrief({
                 className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-line-strong px-3 py-1.5 text-[12px] text-muted transition-colors hover:border-fg/40 hover:text-fg"
               >
                 <Upload className="size-3 shrink-0" aria-hidden="true" />
-                Bifoga orderbekräftelse
+                {t.brief.attach}
               </button>
             </TooltipTrigger>
-            <TooltipContent>
-              I skarpt läge läses fakturarader och förfallodatum ur PDF:en.
-            </TooltipContent>
+            <TooltipContent>{t.brief.attachTip}</TooltipContent>
           </Tooltip>
         )}
 
         {notice ? (
           <span className="rounded-md bg-secondary px-2.5 py-1.5 font-mono text-[10px] tracking-wide text-muted uppercase">
-            Demo — filen läses inte
+            {t.brief.demoNotice}
           </span>
         ) : null}
       </div>

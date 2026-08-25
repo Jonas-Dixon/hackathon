@@ -1,4 +1,5 @@
 import type { CiteId } from "./citations";
+import { strings } from "./lang";
 
 /**
  * Allt som demon fyller i åt användaren. När riktiga nycklar är påkopplade
@@ -97,29 +98,33 @@ export const ORDER_TEMPLATE: OrderTemplate = {
     "zg-cinv-muller",
   ),
   customerCountry: "DE",
-  materialShare: sourced(
-    0.62,
-    "derived",
-    "Medianandel material på tidigare ordrar i bokföringen",
-    "zg-sinv-atlas",
-  ),
-  materialLeadDays: sourced(
-    12,
-    "derived",
-    "Snittid från orderdatum till förfallen materialfaktura",
-    "zg-sinv-atlas",
-  ),
-  paymentTermDays: sourced(60, "zg", "Villkor på kundens senaste fakturor", "zg-cinv-muller"),
-  customerLateDays: sourced(
-    23,
-    "derived",
-    "Snitt av dueDate mot paidDate på tre betalda fakturor",
-    "zg-cinv-muller",
-  ),
+  materialShare: sourced(0.62, "derived", "profile.materialShareWire", "zg-sinv-atlas"),
+  materialLeadDays: sourced(12, "derived", "profile.materialLeadWire", "zg-sinv-atlas"),
+  paymentTermDays: sourced(60, "zg", "profile.paymentTermWire", "zg-cinv-muller"),
+  customerLateDays: sourced(23, "derived", "profile.customerLateWire", "zg-cinv-muller"),
   vatRate: 0.25,
 };
 
-export const MODE_LABEL: Record<DataMode, string> = {
-  demo: "Demodata",
-  live: "Skarp data",
-};
+export function modeLabel(mode: DataMode): string {
+  return strings().mode[mode];
+}
+
+/**
+ * `wire` är antingen ett riktigt API-anrop (visas som det är) eller en nyckel in
+ * i språkpaketet, för de fält vi räknat fram själva och beskriver i prosa.
+ */
+export function wireText(wire: string): string {
+  const L = strings();
+  switch (wire) {
+    case "profile.materialShareWire":
+      return L.profile.materialShareWire;
+    case "profile.materialLeadWire":
+      return L.profile.materialLeadWire;
+    case "profile.paymentTermWire":
+      return L.profile.paymentTermWire;
+    case "profile.customerLateWire":
+      return L.profile.customerLateWire;
+    default:
+      return wire;
+  }
+}
