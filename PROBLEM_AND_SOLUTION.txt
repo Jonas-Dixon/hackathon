@@ -1,0 +1,120 @@
+CAN I AFFORD THIS ORDER?
+A liquidity check for companies that buy before they get paid
+
+Built with Zwapgrid + Open Payments
+
+
+------------------------------------------------------------
+THE PROBLEM
+------------------------------------------------------------
+
+Middleman companies buy goods from suppliers and resell them to
+customers. They pay their suppliers before their customers pay them.
+
+That gap is where things go wrong.
+
+A company places an order with a supplier. Thirty days later the
+supplier invoice is due. But the money from their own customers
+hasn't arrived yet, because those customers pay late. Now the
+company can't pay, and it becomes someone else's problem: late fees,
+a damaged supplier relationship, or a supplier who stops delivering.
+
+The frustrating part is that nobody set out to overcommit. The
+decision to order was made with incomplete information.
+
+Here is why. When someone asks "can we afford this?", they look at
+the bank balance. The bank balance looks fine. So they order.
+
+But the bank account has no idea that:
+  - 400,000 SEK of supplier invoices come due over the next 3 weeks
+  - payroll runs on the 25th
+  - a VAT payment is due next month
+  - the big customer invoice they're counting on is always paid late
+
+And the accounting system, which does know all of that, has no idea
+how much money is actually in the bank right now.
+
+So the two systems that could answer the question never talk to each
+other. The company is left guessing.
+
+
+------------------------------------------------------------
+THE INSIGHT
+------------------------------------------------------------
+
+The bank knows what you HAVE.
+The accounting system knows what you OWE and what you're OWED.
+
+Neither one can answer "can I afford this order?" on its own.
+Together, they can answer it completely.
+
+
+------------------------------------------------------------
+THE SOLUTION
+------------------------------------------------------------
+
+A tool where a company types in an order they're thinking about
+placing, and gets a straight answer:
+
+  YES  - place it now, you're covered
+  NO   - but you can place it on September 14th
+  RISKY - it works only if your biggest customer pays on time
+
+How it works, in plain terms:
+
+1. We read the real bank balance and transaction history through
+   Open Payments. This is the actual money, across every account
+   and bank the company uses, including payments that are already
+   on their way out but haven't settled yet.
+
+2. We read the company's invoices through Zwapgrid. Every unpaid
+   supplier invoice they owe, with its due date. Every unpaid
+   customer invoice they're waiting on, with its due date.
+
+3. We learn how customers actually behave. Zwapgrid gives us the
+   payment history, so we can see that a particular customer pays
+   twelve days late, every single time. We stop pretending that
+   invoice will arrive on its due date, because it won't.
+
+4. We build a day-by-day forecast of the bank balance for the next
+   three months. Money in, money out, on the dates it will really
+   happen rather than the dates it was promised.
+
+5. We drop the proposed order into that forecast on the day its
+   invoice would come due, and check whether the balance ever dips
+   below a safety cushion.
+
+If it does, we don't just say no. We say when. We roll the order
+forward day by day until it fits, and tell the company the earliest
+date they can safely place it.
+
+We also tell them WHY. Not "insufficient funds", but "you're 42,000
+SEK short on September 3rd, because of the VAT payment and the
+invoice from Nordic Metals." That's something a person can act on.
+
+
+------------------------------------------------------------
+WHAT MAKES IT MORE THAN A DASHBOARD
+------------------------------------------------------------
+
+Open Payments can also move money, including scheduling payments
+for a future date. So when we say "you can place this order if you
+pay on September 14th", we can schedule that payment right there.
+
+The answer becomes an action instead of a warning.
+
+And because we can see the real bank transactions, we can match
+them against the invoices in the accounting system and mark them
+as paid automatically. The forecast stays accurate without waiting
+for someone to do the bookkeeping.
+
+
+------------------------------------------------------------
+WHY IT MATTERS
+------------------------------------------------------------
+
+Every company in this position is already making this decision.
+They're just making it with a bank balance and a gut feeling.
+
+We're not asking them to change how they operate. We're giving them
+the one number they were missing at the moment they needed it.
