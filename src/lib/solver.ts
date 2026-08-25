@@ -98,21 +98,50 @@ function toLever(
   };
 }
 
-/** Den största utbetalningen som faktiskt går att skjuta på. Lön och skatt gör det inte. */
-function movablePayable(flows: Flow[]): Flow | null {
+/** Hur långt vi som mest ber om att flytta en post. Styr både steg och urval. */
+const MAX_PULL_DAYS = 30;
+const MAX_DELAY_DAYS = 45;
+
+function plusDays(dateIso: string, days: number): string {
+  return iso(addDays(parseIso(dateIso), days));
+}
+
+/**
+ * En utbetalning ett anstånd faktiskt kan lyfta över botten: den måste ligga
+ * före botten, men inte längre före än vi kan skjuta den. Den största
+ * utbetalningen i hela perioden hjälper inte om den redan är betald när hålet
+ * uppstår. Lön, skatt, hyra och försäkring flyttar man inte.
+ */
+function movablePayable(flows: Flow[], troughDate: string): Flow | null {
   const locked = /lön|skatt|hyra|försäkring/i;
+  const earliest = plusDays(troughDate, -MAX_DELAY_DAYS);
   return (
     flows
-      .filter((f) => f.kind === "out" && f.source !== "order" && !locked.test(f.label))
+      .filter(
+        (f) =>
+          f.kind === "out" &&
+          f.source !== "order" &&
+          !locked.test(f.label) &&
+          f.date > earliest &&
+          f.date <= troughDate,
+      )
       .sort((a, b) => b.amount - a.amount)[0] ?? null
   );
 }
 
-/** Den största inbetalningen som ligger efter botten — den är värd ett telefonsamtal. */
+/**
+ * En inbetalning ett telefonsamtal faktiskt kan flytta före botten: efter
+ * botten, men inom räckhåll. En fordran som förfaller om ett halvår räddar
+ * ingen kassa i januari.
+ */
 function pullableReceivable(flows: Flow[], troughDate: string): Flow | null {
+  const latest = plusDays(troughDate, MAX_PULL_DAYS);
   return (
     flows
-      .filter((f) => f.kind === "in" && f.source !== "order" && f.date > troughDate)
+      .filter(
+        (f) =>
+          f.kind === "in" && f.source !== "order" && f.date > troughDate && f.date <= latest,
+      )
       .sort((a, b) => b.amount - a.amount)[0] ?? null
   );
 }
@@ -212,7 +241,7 @@ export function levers(draft: OrderDraft): Lever[] {
       toLever(
         "receivable",
         "Ring en kund",
-        search([7, 14, 21, 30], (days) => {
+        search([7, 14, 21, MAX_PULL_DAYS], (days) => {
           const moved = shift(receivable, -days);
           if (moved.date < iso(TODAY)) return null;
           return {
@@ -227,14 +256,14 @@ export function levers(draft: OrderDraft): Lever[] {
   }
 
   // 5. Skjut på en egen leverantör. Lön och skatt räknas inte som flyttbara.
-  const payable = movablePayable(others);
+  const payable = movablePayable(others, basePoint.date);
   if (payable) {
     const rest = others.filter((f) => f !== payable);
     out.push(
       toLever(
         "payable",
         "Skjut en faktura",
-        search([14, 21, 30, 45], (days) => {
+        search([14, 21, 30, MAX_DELAY_DAYS], (days) => {
           const moved = shift(payable, days);
           return {
             ask: `Be om ${days} dagars anstånd på ${payable.label} — ${formatSek(payable.amount)}.`,

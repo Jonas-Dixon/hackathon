@@ -1,3 +1,4 @@
+import { HORIZON_DAYS } from "@/lib/order";
 import type { CeilingRow } from "@/lib/solver";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,9 @@ export function OrderCeiling({ rows, insight }: { rows: CeilingRow[]; insight: s
       <CardHeader className="flex-row items-start justify-between">
         <div>
           <CardTitle>Största order ni kan ta idag</CardTitle>
-          <CardDescription>Utan att kassan dyker under kudden på 12 veckor.</CardDescription>
+          <CardDescription>
+          Utan att kassan dyker under kudden inom {Math.round(HORIZON_DAYS / 30)} månader.
+        </CardDescription>
         </div>
         <Badge variant="clear">Tak</Badge>
       </CardHeader>
