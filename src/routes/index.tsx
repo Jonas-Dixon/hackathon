@@ -1,240 +1,202 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
-import ClickSpark from "@/components/bits/ClickSpark";
-import SpotlightCard from "@/components/bits/SpotlightCard";
-import { CapacityMini, CapacityNotice } from "@/components/capacity-limits";
+import { CapacityTimeline } from "@/components/capacity-limits";
 import { CashCalendar } from "@/components/cash-calendar";
-import { Onboarding } from "@/components/onboarding";
-import { CashChart } from "@/components/cash-chart";
 import { CrossBoard } from "@/components/cross-board";
+import { DataModeBadge } from "@/components/dashboard-nav";
 import { DayTip } from "@/components/day-tip";
-import { KpiRow } from "@/components/kpi-row";
+import { AnswerStep, AskStep, PlacedStep } from "@/components/decision";
+import { useDecision } from "@/lib/use-decision";
 import { LiveStrip } from "@/components/live-strip";
-import { MissionStrip } from "@/components/mission-strip";
-import { Sidekick } from "@/components/sidekick";
-import { DataFeeds, DataFeedsCompact } from "@/components/source-mark";
-import { VerdictPanel } from "@/components/verdict-panel";
-import { YearWheel } from "@/components/year-wheel";
-import { Badge } from "@/components/ui/badge";
+import { Onboarding } from "@/components/onboarding";
+import { SourceLedger } from "@/components/cite";
+import { DataFeedsCompact } from "@/components/source-mark";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import {
-  COMPANY,
-  SCENARIOS,
-  TODAY,
-  decide,
-  project,
-  sidekickNotes,
-  type DayPoint,
-  type ScenarioId,
-} from "@/lib/engine";
-import { baselineCapacity, capacityFor } from "@/lib/capacity";
+import { fmtDay } from "@/lib/capacity";
+import { CITATIONS, type CiteId } from "@/lib/citations";
+import { TODAY, type DayPoint } from "@/lib/engine";
 import { getLiveSnapshot } from "@/lib/live";
-import { formatSek, iso } from "@/lib/utils";
+import { COMPANY_PROFILE } from "@/lib/profile";
+import { cn, formatSek, iso } from "@/lib/utils";
+
+const ALL_CITES = Object.keys(CITATIONS) as CiteId[];
 
 export const Route = createFileRoute("/")({
   loader: () => getLiveSnapshot(),
-  component: Home,
+  component: DecisionPage,
 });
 
-function Home() {
+function DecisionPage() {
   const live = Route.useLoaderData();
-  const [scenarioId, setScenarioId] = useState<ScenarioId>("german");
-  const [takeOrder, setTakeOrder] = useState(true);
-  const [hover, setHover] = useState<DayPoint | null>(null);
-
-  const scenario = SCENARIOS.find((s) => s.id === scenarioId)!;
-  const accept = takeOrder && scenario.orderAmount > 0;
-  const days = useMemo(() => project(scenario, accept), [scenario, accept]);
-  const verdict = useMemo(() => decide(scenario, accept), [scenario, accept]);
-  const notes = useMemo(() => sidekickNotes(scenario, verdict), [scenario, verdict]);
-  const capacity = useMemo(() => capacityFor(scenario, accept), [scenario, accept]);
-  const baseline = useMemo(() => baselineCapacity(), []);
-  const selected = hover ?? days.find((d) => d.date === iso(TODAY)) ?? days[0] ?? null;
-
-  const marks: Record<string, string> = {};
-  if (accept) {
-    marks[scenario.materialDate] = "köp";
-    marks[scenario.startDate] = "start";
-    marks[scenario.payDate] = "in";
-  }
-  marks[iso(TODAY)] = "idag";
+  const d = useDecision();
 
   return (
     <TooltipProvider>
-    <Onboarding />
-    <div className="min-h-screen overflow-x-hidden bg-background text-foreground lg:grid lg:grid-cols-[220px_1fr]">
-      <aside className="flex flex-col border-b border-border bg-card lg:min-h-screen lg:border-b-0 lg:border-r">
-        <div className="flex items-center justify-between px-5 py-5 lg:block">
-          <div>
+      <Onboarding />
+      <div className="min-h-screen bg-background text-foreground">
+        <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4 md:px-8">
+          <div className="flex items-baseline gap-3">
             <p className="font-mono text-[11px] tracking-[0.28em] text-subtle uppercase">Sikt</p>
-            <p className="mt-1 text-lg font-medium leading-none tracking-tight">Kan du ta ordern?</p>
-          </div>
-          <p className="hidden text-xs text-muted-foreground lg:mt-6 lg:block">
-            {COMPANY.name}
-            <br />
-            {COMPANY.city} · {COMPANY.people} pers
-          </p>
-        </div>
-        <nav className="flex gap-2 overflow-x-auto px-4 pb-4 lg:flex-col lg:px-3">
-          {SCENARIOS.map((s) => {
-            const on = s.id === scenarioId;
-            return (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => {
-                  setScenarioId(s.id);
-                  setTakeOrder(s.orderAmount > 0);
-                }}
-                className={`rounded-md px-3 py-2 text-left text-sm transition-colors duration-150 ${
-                  on ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                }`}
-              >
-                {s.name}
-              </button>
-            );
-          })}
-        </nav>
-        {scenario.orderAmount > 0 ? (
-          <div className="px-4 pb-5 lg:px-3">
-            <button
-              type="button"
-              onClick={() => setTakeOrder((v) => !v)}
-              className="w-full rounded-md border border-border px-3 py-2 text-left text-sm text-muted-foreground hover:text-foreground"
-            >
-              {takeOrder ? "Med ordern" : "Utan ordern"}
-            </button>
-          </div>
-        ) : null}
-        <div className="px-4 pb-4 lg:px-3 lg:pb-3">
-          <p className="mb-2 hidden px-1 font-mono text-[10px] tracking-[0.16em] text-subtle uppercase lg:block">
-            Utrymme
-          </p>
-          <CapacityMini summary={baseline} />
-        </div>
-        <div className="hidden lg:block">
-          <DataFeeds />
-        </div>
-      </aside>
-
-      <main className="min-w-0">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-4 md:px-6">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">{scenario.name}</h1>
-            <p className="mt-1 max-w-xl text-sm text-muted-foreground">{scenario.blurb}</p>
+            <p className="text-[13px] text-muted-foreground">{COMPANY_PROFILE.name.value}</p>
           </div>
           <div className="flex items-center gap-2">
-            <DataFeedsCompact />
-            <span className="font-mono text-sm tabular text-muted-foreground">
-              {formatSek(COMPANY.cash, true)}
+            <DataModeBadge />
+            <span className="font-mono text-[13px] tabular text-muted-foreground">
+              {formatSek(COMPANY_PROFILE.cash.value, true)}
             </span>
           </div>
         </header>
 
-        <div className="space-y-4 p-4 md:p-6">
-          <MissionStrip />
-          <CapacityNotice summary={capacity} />
-          <KpiRow days={days} verdict={verdict} orderAmount={accept ? scenario.orderAmount : 0} />
-
-          <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-            <ClickSpark
-              sparkColor="#161615"
-              sparkCount={10}
-              sparkRadius={22}
-              sparkSize={8}
-              duration={380}
-              className="min-h-0"
-            >
-              <SpotlightCard
-                className="flex h-full min-h-0 flex-col overflow-visible rounded-lg border border-border bg-card py-5 shadow-[0_1px_0_rgb(22_22_21/0.04),0_10px_28px_rgb(22_22_21/0.04)]"
-                spotlightColor="rgba(22, 22, 21, 0.08)"
-              >
-                <div className="px-4">
-                  <VerdictPanel verdict={verdict} scenario={scenario} takeOrder={accept} />
-                </div>
-              </SpotlightCard>
-            </ClickSpark>
-            <Card className="hidden items-center py-5 lg:flex">
-              <CardHeader className="w-full flex-row items-center justify-between">
-                <CardTitle className="text-base">Årshjul</CardTitle>
-                <div className="flex gap-2">
-                  <Badge variant="watch">Vinter stilla</Badge>
-                  <Badge variant="storm">Kassa</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="flex w-full flex-col items-center">
-                <YearWheel
-                  days={days}
-                  onHover={setHover}
-                  activeDate={selected?.date}
-                  markDates={marks}
-                />
-                <p className="mt-1 max-w-[260px] text-center text-xs text-muted-foreground">
-                  Innerst årstid för borrning. Ytterst kassan där vi har data. Resten är lucka.
-                </p>
-              </CardContent>
-            </Card>
-          </section>
-
-          <section className="grid items-start gap-4 lg:grid-cols-[1.35fr_0.65fr]">
-            <div className="flex flex-col gap-4">
-            <Card>
-              <CardHeader className="flex-row items-baseline justify-between">
-                <div>
-                  <CardTitle>Kassakalender</CardTitle>
-                  <CardDescription>Prickens form visar hur säker dagens post är.</CardDescription>
-                </div>
-                <Badge>6 veckor</Badge>
-              </CardHeader>
-              <CardContent>
-                <CashCalendar
-                  days={days}
-                  onHover={setHover}
-                  activeDate={selected?.date}
-                  markDates={marks}
-                />
-              </CardContent>
-            </Card>
-              <Card className="hidden gap-2 py-3 md:flex">
-                <CardHeader className="flex-row items-center justify-between">
-                  <CardTitle className="text-base">Kassa, 12 veckor</CardTitle>
-                  <DataFeedsCompact />
-                </CardHeader>
-                <CardContent>
-                  <CashChart days={days} />
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="flex flex-col gap-4">
-              <div className="hidden md:block">
-                <DayTip day={selected} />
-              </div>
-              <CrossBoard scenarioId={scenarioId} />
-              <Sidekick notes={notes} />
-            </div>
-          </section>
-
-          <details className="group rounded-lg border border-border bg-card px-4 py-3">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-fg transition-colors hover:text-muted [&::-webkit-details-marker]:hidden">
-              <ChevronRight
-                className="size-4 transition-transform duration-200 group-open:rotate-90"
-                aria-hidden="true"
+        {d.step === "detail" ? (
+          <Detail
+            live={live}
+            verdictDays={d.verdict.days}
+            onBack={() => d.setStep(d.placed ? "answer" : "answer")}
+          />
+        ) : (
+          <div className="flex min-h-[calc(100vh-57px)] items-center px-5 py-12 md:px-8">
+            {d.placed ? (
+              <PlacedStep
+                draft={d.draft}
+                verdict={d.verdict}
+                onReset={d.reset}
+                onDetail={() => d.setStep("detail")}
               />
-              Live anrop
-              <span className="ml-1 font-mono text-[11px] font-normal text-subtle">
-                svaren nycklarna faktiskt gav
-              </span>
-            </summary>
-            <div className="mt-4">
-              <LiveStrip live={live} />
-            </div>
-          </details>
-        </div>
-      </main>
-    </div>
+            ) : d.step === "ask" ? (
+              <AskStep
+                draft={d.draft}
+                setDraft={d.setDraft}
+                onSubmit={() => d.setStep("answer")}
+              />
+            ) : (
+              <AnswerStep
+                verdict={d.verdict}
+                draft={d.draft}
+                onBack={() => d.setStep("ask")}
+                onDetail={() => d.setStep("detail")}
+                onPlace={d.place}
+              />
+            )}
+          </div>
+        )}
+      </div>
     </TooltipProvider>
+  );
+}
+
+/** Steg tre: allt som ligger bakom svaret, för den som vill granska. */
+function Detail({
+  live,
+  verdictDays,
+  onBack,
+}: {
+  live: Parameters<typeof LiveStrip>[0]["live"];
+  verdictDays: DayPoint[];
+  onBack: () => void;
+}) {
+  const [hover, setHover] = useState<DayPoint | null>(null);
+  const days = useMemo(() => verdictDays.slice(0, 84), [verdictDays]);
+  const selected = hover ?? days.find((x) => x.date === iso(TODAY)) ?? days[0] ?? null;
+  const marks: Record<string, string> = { [iso(TODAY)]: "idag" };
+  const trough = useMemo(
+    () => days.reduce((m, p) => (p.endCash < m.endCash ? p : m), days[0]),
+    [days],
+  );
+
+  return (
+    <div className="mx-auto max-w-5xl px-5 py-8 md:px-8">
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="size-3.5" aria-hidden="true" />
+        Tillbaka till svaret
+      </button>
+
+      <h1 className="mt-6 text-xl font-semibold tracking-tight">Beslutsunderlag</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Prognosen med ordern inräknad. Lägst {formatSek(trough.endCash, true)} den{" "}
+        {fmtDay(trough.date)}.
+      </p>
+
+      <section className="mt-6 rounded-lg border border-border bg-card px-4 py-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-[15px] font-medium">Kassan, 12 veckor framåt</h2>
+          <DataFeedsCompact />
+        </div>
+        <div className="mt-3">
+          <CapacityTimeline
+            days={days.map((x) => ({
+              date: x.date,
+              endCash: x.endCash,
+              risk: x.risk,
+              fixed: x.outflows.find((f) => f.certainty === "fast")?.label ?? null,
+            }))}
+            ceilingDate={trough.endCash < 80_000 ? trough.date : null}
+          />
+        </div>
+      </section>
+
+      <section className="mt-4 grid items-start gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+        <Card>
+          <CardHeader className="flex-row items-baseline justify-between">
+            <div>
+              <CardTitle>Kassakalender</CardTitle>
+              <CardDescription>Prickens form visar hur säker dagens post är.</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <CashCalendar
+              days={days}
+              onHover={setHover}
+              activeDate={selected?.date}
+              markDates={marks}
+            />
+          </CardContent>
+        </Card>
+
+        <div className="flex flex-col gap-4">
+          <div className="hidden md:block">
+            <DayTip day={selected} />
+          </div>
+          <CrossBoard scenarioId="german" />
+        </div>
+      </section>
+
+      <details className="group mt-4 rounded-lg border border-border bg-card px-4 py-3">
+        <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-fg transition-colors hover:text-muted [&::-webkit-details-marker]:hidden">
+          <ChevronRight
+            className={cn("size-4 transition-transform duration-200 group-open:rotate-90")}
+            aria-hidden="true"
+          />
+          Källor
+          <span className="ml-1 font-mono text-[11px] font-normal text-subtle">
+            {ALL_CITES.length} anrop
+          </span>
+        </summary>
+        <div className="mt-3">
+          <SourceLedger ids={ALL_CITES} />
+        </div>
+      </details>
+
+      <details className="group mt-4 rounded-lg border border-border bg-card px-4 py-3">
+        <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-fg transition-colors hover:text-muted [&::-webkit-details-marker]:hidden">
+          <ChevronRight
+            className="size-4 transition-transform duration-200 group-open:rotate-90"
+            aria-hidden="true"
+          />
+          Live anrop
+          <span className="ml-1 font-mono text-[11px] font-normal text-subtle">
+            svaren nycklarna faktiskt gav
+          </span>
+        </summary>
+        <div className="mt-4">
+          <LiveStrip live={live} />
+        </div>
+      </details>
+    </div>
   );
 }

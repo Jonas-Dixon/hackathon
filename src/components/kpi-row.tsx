@@ -3,7 +3,6 @@ import { TrendingDown, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SourceChip } from "@/components/source-mark";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { DayPoint, Verdict } from "@/lib/engine";
 import { COMPANY } from "@/lib/engine";
 import type { SourceId } from "@/lib/sources";
 import { formatSek } from "@/lib/utils";
@@ -30,22 +29,23 @@ function Spark({ values, tone }: { values: number[]; tone: string }) {
 }
 
 export function KpiRow({
-  days,
-  verdict,
-  orderAmount,
+  cash,
+  trough,
+  troughDate,
+  series,
 }: {
-  days: DayPoint[];
-  verdict: Verdict;
-  orderAmount: number;
+  cash: number;
+  trough: number;
+  troughDate: string;
+  series: number[];
 }) {
-  const series = days.slice(0, 28).map((d) => d.endCash);
-  const troughTone = verdict.trough < 0 ? "#b42318" : verdict.trough < 80000 ? "#9a6700" : "#1a7a4c";
-  const troughDelta = Math.round(((verdict.trough - COMPANY.cash) / COMPANY.cash) * 100);
+  const troughTone = trough < 0 ? "#b42318" : trough < 80000 ? "#9a6700" : "#1a7a4c";
+  const troughDelta = Math.round(((trough - cash) / cash) * 100);
 
   const items = [
     {
       label: "Kassa nu",
-      count: COMPANY.cash,
+      count: cash,
       suffix: " k",
       scale: 1000,
       hint: "Saldo från banken",
@@ -55,22 +55,22 @@ export function KpiRow({
       sources: ["bank"] as SourceId[],
     },
     {
-      label: "Lägsta 6 v",
-      count: verdict.trough,
+      label: "Lägsta, utan ny order",
+      count: trough,
       suffix: " k",
       scale: 1000,
-      hint: verdict.troughDate,
+      hint: troughDate,
       spark: series,
       tone: troughTone,
       change: troughDelta,
       sources: ["bank", "boks"] as SourceId[],
     },
     {
-      label: "Ordern",
-      count: orderAmount,
+      label: "Kudde",
+      count: 80_000,
       suffix: " k",
       scale: 1000,
-      hint: orderAmount ? "exkl. moms" : "ingen ny",
+      hint: "golvet vi inte går under",
       spark: series,
       tone: "#161615",
       change: null,

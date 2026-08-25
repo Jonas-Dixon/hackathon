@@ -133,13 +133,26 @@ const BASE_FLOWS: Flow[] = [
   { date: "2027-01-08", amount: 31_000, label: "Vinterservice", kind: "in", source: "bank", certainty: "antagande", basis: "Låg säsong — snittet för januari de tre senaste åren" },
   { date: "2027-01-15", amount: 41_200, label: "Leverantör, stål", kind: "out", source: "boks", certainty: "forutsagbar", basis: "Leverantörsfaktura med förfallodatum" },
   { date: "2027-01-25", amount: 187_200, label: "Lön januari", kind: "out", source: "boks", certainty: "fast", basis: "Lön den 25:e, 11 anställda" },
+  { date: "2027-01-12", amount: 185_000, label: "Slutfaktura, Mälarenergi", kind: "in", source: "bank", certainty: "forutsagbar", basis: "Etapp 3 godkänd, faktura förfaller 12 jan" },
   { date: "2027-02-02", amount: 55_000, label: "Kund, eftersläp", kind: "in", source: "bank", certainty: "antagande", basis: "Förfallna fakturor som ännu inte betalats" },
+  { date: "2027-02-10", amount: 210_000, label: "Bergvärme, Hallstahammar", kind: "in", source: "bank", certainty: "forutsagbar", basis: "Tecknat kontrakt, fakturering vid driftsättning" },
+  { date: "2027-02-25", amount: 187_200, label: "Lön februari", kind: "out", source: "boks", certainty: "fast", basis: "Lön den 25:e, 11 anställda" },
+  { date: "2027-03-06", amount: 265_000, label: "Pålning, Västerås hamn", kind: "in", source: "bank", certainty: "forutsagbar", basis: "Ramavtal, delfaktura per etapp" },
+  { date: "2027-03-25", amount: 187_200, label: "Lön mars", kind: "out", source: "boks", certainty: "fast", basis: "Lön den 25:e, 11 anställda" },
+  { date: "2027-04-09", amount: 295_000, label: "Geoteknik, Enköping", kind: "in", source: "bank", certainty: "antagande", basis: "Offert accepterad muntligt, inte fakturerad" },
+  { date: "2027-04-26", amount: 187_200, label: "Lön april", kind: "out", source: "boks", certainty: "fast", basis: "Lön den 25:e, faller på helg" },
+  { date: "2027-05-07", amount: 240_000, label: "Bergvärme, etapp 2", kind: "in", source: "bank", certainty: "antagande", basis: "Säsongssnitt för maj de tre senaste åren" },
 ];
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
 
 export function daysAhead(n = 84) {
   return Array.from({ length: n }, (_, i) => addDays(TODAY, i));
+}
+
+/** Grundflödet utan någon ny order — utgångspunkt för egna beräkningar. */
+export function baseFlows(): Flow[] {
+  return [...BASE_FLOWS];
 }
 
 export function buildFlows(scenario: Scenario, takeOrder: boolean): Flow[] {
@@ -177,9 +190,17 @@ function riskFor(endCash: number, payrollSoon: boolean): Risk {
 }
 
 export function project(scenario: Scenario, takeOrder: boolean): DayPoint[] {
-  const flows = buildFlows(scenario, takeOrder);
+  return projectWith(buildFlows(scenario, takeOrder));
+}
+
+/**
+ * Samma projektion, men för en godtycklig uppsättning poster. Horisonten måste
+ * vara lång nog att kundens betalning ryms — annars ser varje order ut som en
+ * ren utgift.
+ */
+export function projectWith(flows: Flow[], horizon = 84): DayPoint[] {
   let cash = COMPANY.cash;
-  return daysAhead().map((d) => {
+  return daysAhead(horizon).map((d) => {
     const key = iso(d);
     const todays = flows.filter((f) => f.date === key);
     const inflows = todays.filter((f) => f.kind === "in");
