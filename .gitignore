@@ -5,3 +5,9 @@ node_modules/
 dist/
 build/
 *.log
+
+# local tool state
+.tanstack/
+.vercel/
+.grok/status
+.node_modules.lock

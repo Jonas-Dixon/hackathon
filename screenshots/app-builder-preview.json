@@ -1,0 +1,39 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Sikt",
+      "hasCanvas": true,
+      "bodyTextLen": 1928,
+      "bodyTextHash": "8a4a8527759374afd16c9bb5acd5203010b5476317439187ba75bacd31820761",
+      "bodyTextPrefix": "SIKT Kan du ta ordern? Nordborr AB Västerås · 11 pers Tysk order",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Sikt",
+      "hasCanvas": true,
+      "bodyTextLen": 1897,
+      "bodyTextHash": "57a0b31f338606d6b53db3e84f4bd9b91574e4149b9171186ef9a372aa5cac5c",
+      "bodyTextPrefix": "SIKT Kan du ta ordern? Tysk order Servicejobb Ingen ny order Med",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [
+    "BRAND WARNING: this looks like a game/canvas app but src/lib/og/site.json is missing \"type\": \"x:game\". X uses og:type=x:game to present the unfurl as a game card — set it in /workspace/src/lib/og/site.json per /workspace/.grok/skills/og/SKILL.md. Do not invent x:type or overload twitter:card as the game signal.",
+    "BRAND WARNING: this looks like a game/canvas app but /workspace/public/x-banner.jpg is missing. Games need a 50:11 X feed card (1200×264 JPEG) at public/x-banner.jpg — open /workspace/.grok/skills/og/SKILL.md and finish the brand-asset pass."
+  ],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}

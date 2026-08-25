@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Sikt",
+      "hasCanvas": false,
+      "bodyTextLen": 1749,
+      "bodyTextHash": "2b63e16932b250c5995615a6f1dabf3c649b1e64b477064ceae06dcd52ba301c",
+      "bodyTextPrefix": "SIKT Kan du ta ordern? Nordborr AB Västerås · 11 pers Tysk order",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Sikt",
+      "hasCanvas": false,
+      "bodyTextLen": 1718,
+      "bodyTextHash": "7e2b900e3e5516165bc2e588cba9e588928031046f8ec5dd048f990e009b3281",
+      "bodyTextPrefix": "SIKT Kan du ta ordern? Tysk order Servicejobb Ingen ny order Med",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}

@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fraunces", "Times New Roman", serif;
+  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --color-bg: #f3f2ee;
+  --color-surface: #ffffff;
+  --color-elevated: #fafaf7;
+  --color-fg: #161615;
+  --color-muted: #5c5c56;
+  --color-subtle: #8a8a82;
+  --color-line: #e4e3dc;
+  --color-line-strong: #cdcbc2;
+  --color-fog: #161615;
+  --color-ink: #161615;
+  --color-clear: #1a7a4c;
+  --color-watch: #9a6700;
+  --color-storm: #b42318;
+  --color-gap: #6f6f68;
+
+  --color-background: #f3f2ee;
+  --color-card: #ffffff;
+  --color-foreground: #161615;
+  --color-muted-foreground: #5c5c56;
+  --color-border: #e4e3dc;
+  --color-primary: #161615;
+  --color-primary-foreground: #f3f2ee;
+  --color-secondary: #ecebe6;
+  --color-secondary-foreground: #161615;
+  --color-accent: #ecebe6;
+  --color-accent-foreground: #161615;
+  --color-destructive: #b42318;
+  --color-ring: #161615;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --shadow-soft: 0 1px 0 rgb(22 22 21 / 0.04), 0 8px 24px rgb(22 22 21 / 0.04);
+}
+
+@layer base {
+  html,
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    min-height: 100%;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  * {
+    border-color: var(--color-line);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radar-sweep {
+    animation: none !important;
+  }
+}
+
+@keyframes radar-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes stamp-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) rotate(-2deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(-1.5deg);
+  }
+}
+
+.radar-sweep {
+  transform-origin: center;
+  animation: radar-spin 7.5s linear infinite;
+}
+
+.verdict-stamp {
+  animation: stamp-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fold-pair {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  isolation: isolate;
+  margin-bottom: 6px;
+}
+
+.fold-face {
+  border: 1px solid var(--color-line);
+  padding: 10px 12px 12px;
+  min-width: 0;
+}
+
+.fold-left {
+  border-radius: 10px 0 0 10px;
+  background: var(--color-bg);
+  z-index: 1;
+}
+
+.fold-right {
+  margin-left: -14px;
+  border-radius: 10px;
+  background: var(--color-elevated);
+  box-shadow: -12px 6px 22px rgb(22 22 21 / 0.08);
+  transform: rotate(0.7deg);
+  z-index: 2;
+}
+
+.fold-crease {
+  position: absolute;
+  left: calc(50% - 8px);
+  top: 10px;
+  bottom: 10px;
+  width: 10px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgb(22 22 21 / 0.08),
+    rgb(255 255 255 / 0.55) 45%,
+    rgb(22 22 21 / 0.04)
+  );
+  clip-path: polygon(40% 0, 100% 0, 60% 100%, 0 100%);
+}
+
+.fold-delta {
+  position: absolute;
+  right: 10px;
+  bottom: -8px;
+  z-index: 4;
+  border-radius: 999px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  padding: 2px 8px;
+}
+
+@media (max-width: 420px) {
+  .fold-right {
+    margin-left: -8px;
+    transform: rotate(0.4deg);
+  }
+  .fold-face {
+    padding: 8px 10px 10px;
+  }
+  .verdict-stamp {
+    font-size: 2.5rem;
+  }
+}
