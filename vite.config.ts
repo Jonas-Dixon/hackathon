@@ -35,8 +35,10 @@ function buildStamp() {
   return {
     commit: sha || "",
     branch,
-    // Ocommitterat i trädet betyder att sha:t inte beskriver det som byggdes.
-    dirty: git("git status --porcelain") !== "",
+    // Ändrade spårade filer betyder att sha:t inte beskriver det som byggdes.
+    // Ospårat räknas inte — `vercel pull` lägger sina egna filer i trädet, och
+    // varje bygge skulle annars flagga sig självt som smutsigt.
+    dirty: git("git status --porcelain --untracked-files=no") !== "",
     builtAt: new Date().toISOString(),
   };
 }

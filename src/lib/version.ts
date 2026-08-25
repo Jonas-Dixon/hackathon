@@ -31,10 +31,13 @@ export function versionLabel(): string {
 
 /** Hela sanningen, för den som hovrar. */
 export function versionDetail(): string {
+  // Fast tidszon, annars renderar servern UTC och webbläsaren lokal tid — samma
+  // bygge skulle se ut som två, och hydreringen klagar.
   const when = BUILD.builtAt
     ? new Date(BUILD.builtAt).toLocaleString("sv-SE", {
         dateStyle: "short",
         timeStyle: "short",
+        timeZone: "Europe/Stockholm",
       })
     : "okänd tid";
   return `${BUILD.branch} · ${BUILD.commit}${BUILD.dirty ? " (ocommittat)" : ""} · byggd ${when}`;
