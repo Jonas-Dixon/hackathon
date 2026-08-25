@@ -27,7 +27,18 @@ export type LiveSnapshot = {
   zg: { ok: boolean; consents: LiveConsent[]; invoices: number | null; error?: string };
 };
 
+// Samma delade sandbox och samma health-check-problem som i financials.ts —
+// cacha snapshotet i TTL_MS så inte varje sidladdning trycker en ny omgång.
+const TTL_MS = 30_000;
+
+let cached: { at: number; snapshot: LiveSnapshot } | null = null;
+
 export const getLiveSnapshot = createServerFn({ method: "GET" }).handler(async () => {
+  const now = Date.now();
+  if (cached && now - cached.at < TTL_MS) return cached.snapshot;
+
   const { fetchLive } = await import("./live.server");
-  return fetchLive() as Promise<LiveSnapshot>;
+  const snapshot = (await fetchLive()) as LiveSnapshot;
+  cached = { at: now, snapshot };
+  return snapshot;
 });

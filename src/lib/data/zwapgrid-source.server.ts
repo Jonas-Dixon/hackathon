@@ -44,6 +44,10 @@ async function get<T>(path: string): Promise<T> {
       "x-correlation-id": crypto.randomUUID(),
       Accept: "application/json",
     },
+    // Sandboxen kan hänga i stället för att svara med 429. Utan en gräns
+    // väntar hela sidan tills klienten eller Renders proxy ger upp och
+    // stänger anslutningen, vilket syns som en okontrollerad "aborted".
+    signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) throw new Error(`Zwapgrid ${path} → ${res.status}`);
   return (await res.json()) as T;
