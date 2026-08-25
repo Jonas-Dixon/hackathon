@@ -32,13 +32,15 @@ function buildStamp() {
   const sha = git("git rev-parse --short HEAD") || process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7);
   const branch =
     git("git rev-parse --abbrev-ref HEAD") || process.env.VERCEL_GIT_COMMIT_REF || "";
+  // Ett CI-bygge är en ren utcheckning av just det här sha:t. Installationssteget
+  // hinner röra spårade filer innan vi läser git, så på maskinen som deployar
+  // säger flaggan bara att bygget kördes — inte att koden avviker.
+  const ci = Boolean(process.env.CI || process.env.VERCEL);
   return {
     commit: sha || "",
     branch,
     // Ändrade spårade filer betyder att sha:t inte beskriver det som byggdes.
-    // Ospårat räknas inte — `vercel pull` lägger sina egna filer i trädet, och
-    // varje bygge skulle annars flagga sig självt som smutsigt.
-    dirty: git("git status --porcelain --untracked-files=no") !== "",
+    dirty: !ci && git("git status --porcelain --untracked-files=no") !== "",
     builtAt: new Date().toISOString(),
   };
 }
