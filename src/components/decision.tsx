@@ -1,10 +1,12 @@
+import { Link } from "@tanstack/react-router";
 import { ArrowDown, ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { useMemo } from "react";
 import { CashCurve } from "@/components/cash-curve";
 import { Cite } from "@/components/cite";
 import { LeverPanel } from "@/components/lever-panel";
+import { OrderBrief } from "@/components/order-brief";
 import { OrderCeiling } from "@/components/order-ceiling";
-import { Triangulation } from "@/components/triangulation"
+import { Triangulation } from "@/components/triangulation";
 import { SourceIcon } from "@/components/source-mark";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { fmtDay } from "@/lib/capacity";
@@ -220,7 +222,9 @@ export function AnswerStep({
         </p>
       ) : null}
 
-      <div className="mt-6">
+      <OrderBrief draft={draft} verdict={verdict} className="mt-6" />
+
+      <div className="mt-5">
         <CashCurve verdict={verdict} />
       </div>
 
@@ -325,20 +329,27 @@ export function PlacedStep({
         <Cite ids={["op-pis-held"]} />
       </p>
 
-      <div className="mt-7 flex flex-col gap-2 sm:flex-row">
+      <div className="mt-7 flex flex-wrap gap-2">
+        <Link
+          to="/ordrar"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3.5 text-[14px] font-medium text-primary-foreground transition-transform duration-150 hover:translate-y-px"
+        >
+          Stäng och visa mina ordrar
+          <ArrowRight className="size-4" aria-hidden="true" />
+        </Link>
         <button
           type="button"
           onClick={onDetail}
-          className="rounded-md bg-primary px-6 py-3.5 text-[14px] font-medium text-primary-foreground transition-transform duration-150 hover:translate-y-px"
+          className="rounded-lg border border-line-strong px-6 py-3.5 text-[14px] font-medium text-fg transition-colors hover:bg-secondary"
         >
-          Visa beslutsunderlag
+          Beslutsunderlag
         </button>
         <button
           type="button"
           onClick={onReset}
-          className="rounded-md border border-border px-6 py-3.5 text-[14px] text-muted transition-colors hover:text-fg"
+          className="rounded-lg px-4 py-3.5 text-[14px] text-muted transition-colors hover:text-fg"
         >
-          Pröva en till order
+          Pröva en till
         </button>
       </div>
     </div>

@@ -4,9 +4,9 @@ import { useMemo, useState } from "react";
 import { CapacityTimeline } from "@/components/capacity-limits";
 import { CashCalendar } from "@/components/cash-calendar";
 import { CrossBoard } from "@/components/cross-board";
-import { DataModeBadge } from "@/components/dashboard-nav";
 import { DayTip } from "@/components/day-tip";
 import { AnswerStep, AskStep, PlacedStep } from "@/components/decision";
+import { TopNav } from "@/components/top-nav";
 import { useDecision } from "@/lib/use-decision";
 import { LiveStrip } from "@/components/live-strip";
 import { Onboarding } from "@/components/onboarding";
@@ -18,7 +18,6 @@ import { fmtDay } from "@/lib/capacity";
 import { CITATIONS, type CiteId } from "@/lib/citations";
 import { TODAY, type DayPoint } from "@/lib/engine";
 import { getLiveSnapshot } from "@/lib/live";
-import { COMPANY_PROFILE } from "@/lib/profile";
 import { cn, formatSek, iso } from "@/lib/utils";
 
 const ALL_CITES = Object.keys(CITATIONS) as CiteId[];
@@ -36,27 +35,12 @@ function DecisionPage() {
     <TooltipProvider>
       <Onboarding />
       <div className="min-h-screen bg-background text-foreground">
-        <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4 md:px-8">
-          <div className="flex items-baseline gap-3">
-            <p className="font-mono text-[11px] tracking-[0.28em] text-subtle uppercase">Sikt</p>
-            <p className="text-[13px] text-muted-foreground">{COMPANY_PROFILE.name.value}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <DataModeBadge />
-            <span className="font-mono text-[13px] tabular text-muted-foreground">
-              {formatSek(COMPANY_PROFILE.cash.value, true)}
-            </span>
-          </div>
-        </header>
+        <TopNav current="/" onReset={d.reset} />
 
         {d.step === "detail" ? (
-          <Detail
-            live={live}
-            verdictDays={d.verdict.days}
-            onBack={() => d.setStep(d.placed ? "answer" : "answer")}
-          />
+          <Detail live={live} verdictDays={d.verdict.days} onBack={() => d.setStep("answer")} />
         ) : (
-          <div className="flex min-h-[calc(100vh-57px)] items-center px-5 py-12 md:px-8">
+          <div className="flex min-h-[calc(100vh-61px)] items-start px-5 py-12 md:px-8">
             {d.placed ? (
               <PlacedStep
                 draft={d.draft}

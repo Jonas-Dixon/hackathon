@@ -3,40 +3,19 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { FEEDS, type SourceId } from "@/lib/sources";
 import { cn } from "@/lib/utils";
 
-function OpenPaymentsMark({ className }: { className?: string }) {
+/** Open Payments officiella märke, hämtat från openpayments.io. */
+export function OpenPaymentsMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 21 20" className={className} aria-hidden="true">
+    <svg viewBox="0 0 60 37" className={className} aria-hidden="true">
       <path
-        d="M4.68 8.37a3.68 3.68 0 1 0 0-7.37 3.68 3.68 0 0 0 0 7.37Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M16.16 19a3.68 3.68 0 1 0 0-7.37 3.68 3.68 0 0 0 0 7.37Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M19.21 1.63h-6.1v6.11h6.1V1.63Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8.37 15.32 2.37 11.74v7.16l6-3.58Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
+        d="M41.6631 0H18.3693C8.22894 0 0 8.22894 0 18.3693C0 28.5097 8.22894 36.7387 18.3693 36.7387H29.3844V9.16847H41.6307C46.7171 9.16847 50.8315 13.2829 50.8315 18.3693C50.8315 23.4557 46.7171 27.5702 41.6307 27.5702H36.7387V36.7711H41.6307C51.7711 36.7711 60 28.5421 60 18.4017C60 8.26134 51.8359 0 41.6631 0Z"
+        fill="currentColor"
       />
     </svg>
   );
 }
 
-function ZwapgridMark({ className }: { className?: string }) {
+export function ZwapgridMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 18 28" className={className} aria-hidden="true">
       <path d="M10.46 8.45H0v5.42h10.46V8.45Z" fill="currentColor" />

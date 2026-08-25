@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OrdrarRouteImport } from './routes/ordrar'
 import { Route as UtrymmeRouteImport } from './routes/utrymme'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdrarRoute = OrdrarRouteImport.update({
+  id: '/ordrar',
+  path: '/ordrar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UtrymmeRoute = UtrymmeRouteImport.update({
@@ -25,27 +31,31 @@ const UtrymmeRoute = UtrymmeRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ordrar': typeof OrdrarRoute
   '/utrymme': typeof UtrymmeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ordrar': typeof OrdrarRoute
   '/utrymme': typeof UtrymmeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ordrar': typeof OrdrarRoute
   '/utrymme': typeof UtrymmeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/utrymme'
+  fullPaths: '/' | '/ordrar' | '/utrymme'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/utrymme'
-  id: '__root__' | '/' | '/utrymme'
+  to: '/' | '/ordrar' | '/utrymme'
+  id: '__root__' | '/' | '/ordrar' | '/utrymme'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  OrdrarRoute: typeof OrdrarRoute
   UtrymmeRoute: typeof UtrymmeRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ordrar': {
+      id: '/ordrar'
+      path: '/ordrar'
+      fullPath: '/ordrar'
+      preLoaderRoute: typeof OrdrarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/utrymme': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  OrdrarRoute: OrdrarRoute,
   UtrymmeRoute: UtrymmeRoute,
 }
 export const routeTree = rootRouteImport
