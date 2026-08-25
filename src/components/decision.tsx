@@ -1,13 +1,17 @@
 import { ArrowDown, ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { useMemo } from "react";
 import { CashCurve } from "@/components/cash-curve";
 import { Cite } from "@/components/cite";
-import { Triangulation } from "@/components/triangulation";
+import { LeverPanel } from "@/components/lever-panel";
+import { OrderCeiling } from "@/components/order-ceiling";
+import { Triangulation } from "@/components/triangulation"
 import { SourceIcon } from "@/components/source-mark";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { fmtDay } from "@/lib/capacity";
 import { TODAY } from "@/lib/engine";
 import type { Judgement, OrderDraft, VerdictId } from "@/lib/order";
 import { COMPANY_PROFILE, ORDER_TEMPLATE, type Sourced } from "@/lib/profile";
+import { ceilingInsight, levers, orderCeiling } from "@/lib/solver";
 import { addDays, cn, formatSek, iso } from "@/lib/utils";
 
 export type Step = "ask" | "answer" | "detail";
@@ -64,6 +68,11 @@ export function AskStep({
   onSubmit: () => void;
 }) {
   const t = ORDER_TEMPLATE;
+  // Takhöjden beror inte på utkastet — den räknas en gång, inte per knapptryck.
+  const ceiling = useMemo(() => {
+    const rows = orderCeiling();
+    return { rows, insight: ceilingInsight(rows) };
+  }, []);
   return (
     <form
       onSubmit={(e) => {
@@ -134,6 +143,10 @@ export function AskStep({
         />
         <Prefill label="Beställare" field={COMPANY_PROFILE.orgNumber} />
       </div>
+
+      <div className="mt-10">
+        <OrderCeiling rows={ceiling.rows} insight={ceiling.insight} />
+      </div>
     </form>
   );
 }
@@ -151,6 +164,8 @@ export function AnswerStep({
   onDetail: () => void;
   onPlace: (date: string) => void;
 }) {
+  // Spakarna skannar hundratals projektioner — räkna om bara när ordern ändras.
+  const fixes = useMemo(() => levers(draft), [draft]);
   return (
     <div className="onboard-in mx-auto w-full max-w-2xl">
       <button
@@ -247,6 +262,12 @@ export function AnswerStep({
         >
           Lägg ändå {fmtDay(draft.orderDate)}
         </button>
+      ) : null}
+
+      {fixes.length > 0 ? (
+        <div className="mt-8">
+          <LeverPanel levers={fixes} />
+        </div>
       ) : null}
 
       <Triangulation className="mt-8" />
