@@ -5,14 +5,13 @@ import { CashCurve } from "@/components/cash-curve";
 import { Cite } from "@/components/cite";
 import { LeverPanel } from "@/components/lever-panel";
 import { OrderBrief } from "@/components/order-brief";
-import { OrderCeiling } from "@/components/order-ceiling";
 import { Triangulation } from "@/components/triangulation";
 import { SourceIcon } from "@/components/source-mark";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { fmtDay } from "@/lib/capacity";
 import type { Judgement, OrderDraft, VerdictId } from "@/lib/order";
 import { COMPANY_PROFILE, ORDER_TEMPLATE, type Sourced } from "@/lib/profile";
-import { ceilingInsight, levers, orderCeiling } from "@/lib/solver";
+import { levers } from "@/lib/solver";
 import { cn, formatSek } from "@/lib/utils";
 
 export type Step = "ask" | "answer" | "detail";
@@ -69,14 +68,6 @@ export function AskStep({
   onSubmit: () => void;
 }) {
   const t = ORDER_TEMPLATE;
-  const [ceiling, setCeiling] = useState<{
-    rows: ReturnType<typeof orderCeiling>;
-    insight: string;
-  } | null>(null);
-  useEffect(() => {
-    const rows = orderCeiling();
-    setCeiling({ rows, insight: ceilingInsight(rows) });
-  }, []);
   return (
     <div className="onboard-in mx-auto w-full max-w-md">
       <h1 className="font-display text-[clamp(2.25rem,6vw,3.5rem)] leading-[1.02] font-semibold tracking-[-0.02em]">
@@ -140,12 +131,6 @@ export function AskStep({
         />
         <Prefill label="Beställare" field={COMPANY_PROFILE.orgNumber} />
       </div>
-
-      {ceiling ? (
-        <div className="mt-10">
-          <OrderCeiling rows={ceiling.rows} insight={ceiling.insight} />
-        </div>
-      ) : null}
     </div>
   );
 }
