@@ -1,152 +1,200 @@
 import { Link } from "@tanstack/react-router";
-import { Info, RefreshCw } from "lucide-react";
-import { useEffect, useState } from "react";
-import {
-  usedPctFor,
-  toneFor,
-  type CapacityRow,
-  type CapacityTone,
-} from "@/lib/capacity";
-import { cn } from "@/lib/utils";
+import { ChevronRight } from "lucide-react";
+import { Cite, SourceRow } from "@/components/cite";
+import { CUSHION, fmtDay, type CapacitySummary, type TimelineDay } from "@/lib/capacity";
+import type { Risk } from "@/lib/engine";
+import { cn, formatSek } from "@/lib/utils";
 
-const FILL: Record<CapacityTone, string> = {
-  ink: "bg-ink",
-  watch: "bg-watch",
+const SEGMENT: Record<Risk, string> = {
+  clear: "bg-clear/70",
+  watch: "bg-watch/75",
   storm: "bg-storm",
+  gap: "bg-line",
 };
 
-const TEXT: Record<CapacityTone, string> = {
-  ink: "text-fg",
-  watch: "text-watch",
-  storm: "text-storm",
-};
-
-export function LimitBar({
-  pct,
-  tone,
-  className,
+/**
+ * Tidslinje, inte procentmätare. Vänster kant är idag, höger kant är om 12
+ * veckor. Färgen är kassaläget den dagen, tickarna är fasta händelser.
+ */
+export function CapacityTimeline({
+  days,
+  ceilingDate,
+  compact = false,
 }: {
-  pct: number;
-  tone: CapacityTone;
-  className?: string;
+  days: TimelineDay[];
+  ceilingDate: string | null;
+  compact?: boolean;
 }) {
-  const [width, setWidth] = useState(0);
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => setWidth(Math.min(100, pct)));
-    return () => cancelAnimationFrame(raf);
-  }, [pct]);
+  const ceilingIdx = ceilingDate ? days.findIndex((d) => d.date === ceilingDate) : -1;
+  const ceilingPct = ceilingIdx >= 0 ? (ceilingIdx / (days.length - 1)) * 100 : null;
+  const ticks = days
+    .map((d, i) => ({ d, i }))
+    .filter(({ d }) => d.fixed)
+    .map(({ d, i }) => ({ label: d.fixed as string, pct: (i / (days.length - 1)) * 100, date: d.date }));
+
   return (
-    <div
-      role="meter"
-      aria-valuenow={Math.min(100, pct)}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      className={cn("h-2 w-full overflow-hidden rounded-full bg-secondary", className)}
-    >
-      <div
-        className={cn(
-          "h-full rounded-full transition-[width] duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]",
-          FILL[tone],
-        )}
-        style={{ width: `${width}%` }}
-      />
+    <div>
+      <div className={cn("flex overflow-hidden rounded-full", compact ? "h-1.5" : "h-2.5")}>
+        {days.map((d) => (
+          <span key={d.date} className={cn("flex-1", SEGMENT[d.risk])} />
+        ))}
+      </div>
+
+      {compact ? null : (
+        <div className="relative mt-1 h-3">
+          {ticks.map((t) => (
+            <span
+              key={t.date}
+              className="absolute top-0 w-px bg-line-strong"
+              style={{ left: `${t.pct}%`, height: "5px" }}
+              aria-hidden="true"
+            />
+          ))}
+          {ceilingPct != null ? (
+            <span
+              className="absolute top-0 w-[1.5px] bg-storm"
+              style={{ left: `${ceilingPct}%`, height: "9px" }}
+              aria-hidden="true"
+            />
+          ) : null}
+        </div>
+      )}
+
+      {compact ? null : (
+        <div className="relative mt-0.5 h-4">
+          <span className="absolute left-0 font-mono text-[10px] text-subtle">idag</span>
+          {ceilingPct != null ? (
+            <span
+              className="absolute -translate-x-1/2 font-mono text-[10px] whitespace-nowrap text-storm"
+              style={{ left: `${Math.min(82, Math.max(12, ceilingPct))}%` }}
+            >
+              {fmtDay(ceilingDate as string)}
+            </span>
+          ) : null}
+          <span className="absolute right-0 font-mono text-[10px] text-subtle">
+            {fmtDay(days[days.length - 1].date)}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
 
-export function CapacityRowView({ row }: { row: CapacityRow }) {
+/** Notisen: svaret, tidslinjen, och allt annat undanstoppat. */
+export function CapacityNotice({
+  summary,
+  href = "/utrymme",
+}: {
+  summary: CapacitySummary;
+  href?: string;
+}) {
   return (
-    <div className="grid grid-cols-1 items-center gap-x-8 gap-y-2 py-5 sm:grid-cols-[minmax(11rem,17rem)_1fr_auto]">
-      <div className="min-w-0">
-        <p className="truncate text-[15px] font-medium text-fg">{row.label}</p>
-        <p className="mt-1 truncate text-[13px] text-muted-foreground" title={row.sub}>
-          {row.sub}
+    <section className="rounded-lg border border-border bg-card px-4 py-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2
+          className={cn(
+            "text-[17px] font-semibold tracking-tight",
+            summary.ok ? "text-fg" : "text-storm",
+          )}
+        >
+          {summary.headline}
+        </h2>
+        <p className={cn("font-mono text-[13px] tabular", summary.ok ? "text-muted" : "text-storm")}>
+          {summary.ok
+            ? `${formatSek(summary.headroomNow, true)} utrymme`
+            : `${formatSek(summary.shortfall, true)} saknas`}
         </p>
       </div>
-      <LimitBar pct={row.usedPct} tone={row.tone} />
-      <p
-        className={cn(
-          "whitespace-nowrap text-[15px] tabular sm:w-24 sm:text-right",
-          row.tone === "ink" ? "text-muted" : TEXT[row.tone],
-        )}
-      >
-        {row.usedPct}% använt
+
+      <p className="mt-1 text-[13px] text-muted-foreground">
+        {summary.sub}
+        <Cite ids={summary.cites} />
       </p>
-    </div>
+
+      <div className="mt-3">
+        <CapacityTimeline days={summary.days} ceilingDate={summary.ceilingDate} />
+      </div>
+
+      <details className="group mt-3 border-t border-border pt-2.5">
+        <summary className="flex cursor-pointer list-none items-center gap-1 text-[13px] text-muted transition-colors hover:text-fg [&::-webkit-details-marker]:hidden">
+          <ChevronRight
+            className="size-3.5 transition-transform duration-200 group-open:rotate-90"
+            aria-hidden="true"
+          />
+          Vad tar utrymmet?
+        </summary>
+        <ul className="mt-2 space-y-1.5">
+          {summary.drivers.map((d) => (
+            <li key={d.date + d.label} className="flex items-baseline justify-between gap-3 text-[13px]">
+              <span className="min-w-0 flex-1 truncate text-muted">
+                {d.label}
+                <span className="ml-1.5 font-mono text-[11px] text-subtle">{fmtDay(d.date)}</span>
+                <Cite ids={d.cites} />
+              </span>
+              <span className="shrink-0 font-mono text-xs tabular text-storm">
+                −{formatSek(d.amount, true)}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2.5 text-[12px] leading-relaxed text-subtle">
+          Kudden är {formatSek(CUSHION, true)} — utrymmet är allt över den.
+        </p>
+        <div className="mt-2.5">
+          <Link
+            to={href}
+            className="text-[13px] text-fg underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-fg"
+          >
+            Hela underlaget
+          </Link>
+        </div>
+      </details>
+    </section>
   );
 }
 
-export function CapacityCallout({
-  amount,
-  date,
-  label,
-}: {
-  amount: number;
-  date: string;
-  label: string;
-}) {
-  return (
-    <div className="flex gap-3 rounded-lg border border-border bg-card px-4 py-4">
-      <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-      <p className="text-sm leading-relaxed text-muted">
-        <span className="font-medium text-fg">Ditt utrymme är tillfälligt boostat.</span>{" "}
-        {label} ger +{amount.toLocaleString("sv-SE")} kr den {date} och lyfter utrymmet
-        fram till nästa lön. När pengarna landat räknas utrymmet om mot det som ligger
-        framför.
-      </p>
-    </div>
-  );
-}
-
-export function CapacityFooter() {
-  return (
-    <p className="flex items-center gap-1.5 text-[13px] text-subtle">
-      Senast uppdaterad: nyss
-      <RefreshCw className="size-3" aria-hidden="true" />
-    </p>
-  );
-}
-
-// Liten rad i sidopanelen — samma idé som context-mätaren i Claude Code.
-export function CapacityMini({ row }: { row: CapacityRow }) {
+/** Sidopanelens rad. Bara svaret och tidslinjen. */
+export function CapacityMini({ summary }: { summary: CapacitySummary }) {
   return (
     <Link
       to="/utrymme"
       className="block rounded-md border border-border bg-background px-2.5 py-2 transition-colors hover:bg-secondary"
     >
       <span className="flex items-baseline justify-between gap-2">
-        <span className="text-[13px] font-medium text-fg">Orderutrymme</span>
+        <span className="text-[13px] font-medium text-fg">Utrymme</span>
         <span
           className={cn(
             "font-mono text-[11px] tabular",
-            row.tone === "ink" ? "text-subtle" : TEXT[row.tone],
+            summary.ok ? "text-muted" : "text-storm",
           )}
         >
-          {row.usedPct}%
+          {summary.ok ? formatSek(summary.headroomNow, true) : `−${formatSek(summary.shortfall, true)}`}
         </span>
       </span>
-      <LimitBar pct={row.usedPct} tone={row.tone} className="mt-1.5 h-1.5" />
-      <span className="mt-1.5 block truncate text-[11px] text-muted-foreground">{row.sub}</span>
+      <span className="mt-1.5 block">
+        <CapacityTimeline days={summary.days} ceilingDate={summary.ceilingDate} compact />
+      </span>
+      <span className="mt-1.5 block truncate text-[11px] text-muted-foreground">
+        {summary.ceilingDate ? `Taket ${fmtDay(summary.ceilingDate)}` : `${summary.ordersLeft} jobb till`}
+      </span>
     </Link>
   );
 }
 
-// Mikroraden i transaktionslistan: hur mycket av utrymmet som är kvar efter dagen.
+/** Mikroraden i dagkortet. Så diskret som det går utan att försvinna. */
 export function DayCapacityInline({ endCash }: { endCash: number }) {
-  const pct = usedPctFor(endCash);
-  const tone = toneFor(endCash);
+  const left = endCash - CUSHION;
+  const ok = left > 0;
   return (
-    <div className="mt-2.5 flex items-center gap-2 border-t border-border pt-2.5">
-      <span className="flex-1 text-[11px] text-subtle">Orderutrymme efter dagen</span>
-      <LimitBar pct={pct} tone={tone} className="w-20 shrink-0 sm:w-24" />
-      <span
-        className={cn(
-          "w-9 text-right font-mono text-[11px] tabular",
-          tone === "ink" ? "text-subtle" : TEXT[tone],
-        )}
-      >
-        {Math.min(999, pct)}%
+    <p className="mt-2.5 flex items-baseline justify-between gap-2 border-t border-border pt-2.5 text-[11px]">
+      <span className="text-subtle">Utrymme kvar efter dagen</span>
+      <span className={cn("font-mono tabular", ok ? "text-muted" : "text-storm")}>
+        {ok ? formatSek(left, true) : `−${formatSek(Math.abs(left), true)}`}
       </span>
-    </div>
+    </p>
   );
+}
+
+export function CapacitySources({ summary }: { summary: CapacitySummary }) {
+  return <SourceRow ids={summary.cites} />;
 }

@@ -1,74 +1,64 @@
-import { SourceChip } from "@/components/source-mark";
+import { Cite, SourceRow } from "@/components/cite";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ScenarioId } from "@/lib/engine";
 import { triangulate, type Finding } from "@/lib/cross";
-import { ACCOUNT, ASPSP, BALANCE, OP_SCOPES, atlasPayment } from "@/lib/open-payments";
 import { cn } from "@/lib/utils";
 
-const TONE: Record<Finding["tone"], string> = {
-  storm: "border-storm/40 bg-storm/5",
-  watch: "border-watch/40 bg-watch/5",
-  clear: "border-clear/35 bg-clear/5",
-  gap: "border-border bg-background",
+const MARK: Record<Finding["tone"], { word: string; dot: string; text: string }> = {
+  storm: { word: "Stoppa", dot: "bg-storm", text: "text-storm" },
+  watch: { word: "Justerat", dot: "bg-watch", text: "text-watch" },
+  clear: { word: "Löst", dot: "bg-clear", text: "text-clear" },
+  gap: { word: "Lucka", dot: "bg-subtle", text: "text-muted" },
 };
 
-const TONE_WORD: Record<Finding["tone"], string> = {
-  storm: "Stoppa",
-  watch: "Sen",
-  clear: "Fylld lucka",
-  gap: "Släpar",
-};
+function FindingCard({ finding }: { finding: Finding }) {
+  const mark = MARK[finding.tone];
+  return (
+    <article className="border-b border-border pb-4 last:border-b-0 last:pb-0">
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 className="text-[15px] font-medium text-fg">{finding.title}</h3>
+        <span className={cn("flex shrink-0 items-center gap-1.5 font-mono text-[10px] tracking-wide uppercase", mark.text)}>
+          <span className={cn("size-1.5 rounded-full", mark.dot)} />
+          {mark.word}
+        </span>
+      </div>
+
+      <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
+        {finding.claim.map((c, i) => (
+          <span key={c.text}>
+            {i > 0 ? " " : ""}
+            {c.text}
+            {c.cites ? <Cite ids={c.cites} /> : null}
+          </span>
+        ))}
+      </p>
+
+      <p className="mt-2 border-l-2 border-line pl-2.5 text-[12px] leading-relaxed text-subtle">
+        {finding.action}
+      </p>
+
+      <div className="mt-2.5">
+        <SourceRow ids={finding.cites} />
+      </div>
+    </article>
+  );
+}
 
 export function CrossBoard({ scenarioId }: { scenarioId: ScenarioId }) {
   const findings = triangulate(scenarioId);
-  const blocked = findings.some((f) => f.id === "iban");
-  const pis = atlasPayment(blocked);
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle>Korsning</CardTitle>
-            <CardDescription>
-              AIS GET /psd2/aspspinformation — banker live. Transaktioner efter BankID.
-            </CardDescription>
-          </div>
-          <div className="flex gap-1.5">
-            <SourceChip id="bank" />
-            <SourceChip id="boks" />
-          </div>
-        </div>
-        <p className="mt-2 font-mono text-[10px] leading-relaxed text-subtle">
-          {ASPSP.name} · {ACCOUNT.usage} · {BALANCE.balanceType} · {OP_SCOPES.join(" · ")}
-        </p>
+        <CardTitle>Fynd</CardTitle>
+        <CardDescription>
+          Bankens transaktioner mot bokföringens fakturor. {findings.length} saker att veta.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-2.5">
+      <CardContent className="space-y-4">
         {findings.map((f) => (
-          <article key={f.id} className={cn("rounded-md border px-3 py-2.5", TONE[f.tone])}>
-            <div className="flex items-baseline justify-between gap-2">
-              <p className="text-sm font-medium text-fg">{f.title}</p>
-              <span className="font-mono text-[10px] tracking-wide text-subtle uppercase">
-                {TONE_WORD[f.tone]}
-              </span>
-            </div>
-            <p className="mt-1 text-[13px] leading-snug text-muted">{f.line}</p>
-            <p className="mt-1.5 text-[11px] leading-snug text-subtle">{f.detail}</p>
-          </article>
+          <FindingCard key={f.id} finding={f} />
         ))}
-
-        {scenarioId === "german" ? (
-          <article className="rounded-md border border-storm/40 bg-storm/5 px-3 py-2.5">
-            <div className="flex items-baseline justify-between gap-2">
-              <p className="text-sm font-medium text-fg">PIS skickas inte</p>
-              <span className="font-mono text-[10px] tracking-wide text-subtle uppercase">held</span>
-            </div>
-            <p className="mt-1 text-[13px] leading-snug text-muted">
-              POST /v1/payments/{pis.product} · {pis.giroType} {pis.creditorGiro} · {Math.round(Number(pis.amount) / 1000)} k
-            </p>
-            <p className="mt-1.5 font-mono text-[11px] leading-snug text-subtle">{pis.reason}</p>
-          </article>
-        ) : null}
       </CardContent>
     </Card>
   );

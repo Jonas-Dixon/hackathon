@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import ClickSpark from "@/components/bits/ClickSpark";
 import SpotlightCard from "@/components/bits/SpotlightCard";
-import { CapacityMini } from "@/components/capacity-limits";
+import { CapacityMini, CapacityNotice } from "@/components/capacity-limits";
 import { CashCalendar } from "@/components/cash-calendar";
+import { Onboarding } from "@/components/onboarding";
 import { CashChart } from "@/components/cash-chart";
 import { CrossBoard } from "@/components/cross-board";
 import { DayTip } from "@/components/day-tip";
@@ -27,7 +29,7 @@ import {
   type DayPoint,
   type ScenarioId,
 } from "@/lib/engine";
-import { capacitySnapshot } from "@/lib/capacity";
+import { baselineCapacity, capacityFor } from "@/lib/capacity";
 import { getLiveSnapshot } from "@/lib/live";
 import { formatSek, iso } from "@/lib/utils";
 
@@ -47,7 +49,8 @@ function Home() {
   const days = useMemo(() => project(scenario, accept), [scenario, accept]);
   const verdict = useMemo(() => decide(scenario, accept), [scenario, accept]);
   const notes = useMemo(() => sidekickNotes(scenario, verdict), [scenario, verdict]);
-  const capacity = useMemo(() => capacitySnapshot(), []);
+  const capacity = useMemo(() => capacityFor(scenario, accept), [scenario, accept]);
+  const baseline = useMemo(() => baselineCapacity(), []);
   const selected = hover ?? days.find((d) => d.date === iso(TODAY)) ?? days[0] ?? null;
 
   const marks: Record<string, string> = {};
@@ -60,6 +63,7 @@ function Home() {
 
   return (
     <TooltipProvider>
+    <Onboarding />
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground lg:grid lg:grid-cols-[220px_1fr]">
       <aside className="flex flex-col border-b border-border bg-card lg:min-h-screen lg:border-b-0 lg:border-r">
         <div className="flex items-center justify-between px-5 py-5 lg:block">
@@ -108,7 +112,7 @@ function Home() {
           <p className="mb-2 hidden px-1 font-mono text-[10px] tracking-[0.16em] text-subtle uppercase lg:block">
             Utrymme
           </p>
-          <CapacityMini row={capacity.horizon[0]} />
+          <CapacityMini summary={baseline} />
         </div>
         <div className="hidden lg:block">
           <DataFeeds />
@@ -131,7 +135,7 @@ function Home() {
 
         <div className="space-y-4 p-4 md:p-6">
           <MissionStrip />
-          <LiveStrip live={live} />
+          <CapacityNotice summary={capacity} />
           <KpiRow days={days} verdict={verdict} orderAmount={accept ? scenario.orderAmount : 0} />
 
           <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
@@ -174,13 +178,13 @@ function Home() {
             </Card>
           </section>
 
-          <section className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+          <section className="grid items-start gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+            <div className="flex flex-col gap-4">
             <Card>
               <CardHeader className="flex-row items-baseline justify-between">
                 <div>
                   <CardTitle>Kassakalender</CardTitle>
-                  <CardDescription className="md:hidden">Tryck en dag. Bara dagar som rör kassan.</CardDescription>
-                  <CardDescription className="hidden md:block">Varje dag ett kort. Hovra — inga tabeller.</CardDescription>
+                  <CardDescription>Prickens form visar hur säker dagens post är.</CardDescription>
                 </div>
                 <Badge>6 veckor</Badge>
               </CardHeader>
@@ -193,25 +197,41 @@ function Home() {
                 />
               </CardContent>
             </Card>
-
-            <div className="flex flex-col gap-4">
-              <div className="hidden md:block">
-                <DayTip day={selected} />
-              </div>
-              <CrossBoard scenarioId={scenarioId} />
-              <CrossBoard scenarioId={scenarioId} />
               <Card className="hidden gap-2 py-3 md:flex">
                 <CardHeader className="flex-row items-center justify-between">
-                  <CardTitle className="text-base">Kassa, 8 veckor</CardTitle>
+                  <CardTitle className="text-base">Kassa, 12 veckor</CardTitle>
                   <DataFeedsCompact />
                 </CardHeader>
                 <CardContent>
                   <CashChart days={days} />
                 </CardContent>
               </Card>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <div className="hidden md:block">
+                <DayTip day={selected} />
+              </div>
+              <CrossBoard scenarioId={scenarioId} />
               <Sidekick notes={notes} />
             </div>
           </section>
+
+          <details className="group rounded-lg border border-border bg-card px-4 py-3">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-fg transition-colors hover:text-muted [&::-webkit-details-marker]:hidden">
+              <ChevronRight
+                className="size-4 transition-transform duration-200 group-open:rotate-90"
+                aria-hidden="true"
+              />
+              Live anrop
+              <span className="ml-1 font-mono text-[11px] font-normal text-subtle">
+                svaren nycklarna faktiskt gav
+              </span>
+            </summary>
+            <div className="mt-4">
+              <LiveStrip live={live} />
+            </div>
+          </details>
         </div>
       </main>
     </div>

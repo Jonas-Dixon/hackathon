@@ -1,3 +1,4 @@
+import type { CiteId } from "./citations";
 import type { ScenarioId } from "./engine";
 import { ATLAS_GIRO_NEW, ATLAS_GIRO_OLD } from "./open-payments";
 
@@ -27,10 +28,19 @@ export type Invoice = {
 export type Finding = {
   id: string;
   tone: "storm" | "watch" | "clear" | "gap";
+  /** Vad vi hittade, som en mening någon kan agera på. */
   title: string;
-  line: string;
-  from: "bank" | "boks" | "both";
-  detail: string;
+  /** Påståendet i prosa. Segmenten citeras var för sig. */
+  claim: Claim[];
+  /** Vad vi gör åt det. */
+  action: string;
+  cites: CiteId[];
+};
+
+/** En bit av ett påstående plus de källor just den biten vilar på. */
+export type Claim = {
+  text: string;
+  cites?: CiteId[];
 };
 
 const ATLAS_OLD = "SE35 5000 0000 0583 9715 8392";
@@ -186,10 +196,20 @@ export function triangulate(scenarioId: ScenarioId): Finding[] {
     findings.push({
       id: "iban",
       tone: "storm",
-      title: "Leverantörens konto byttes",
-      line: `Atlas Copco. ${atlasPaid.length} tidigare swedish-giro till Bankgiro ${ATLAS_GIRO_OLD}. Ny faktura ${Math.round(newInv.amount / 1000)} k pekar på ${ATLAS_GIRO_NEW}.`,
-      from: "both",
-      detail: `AIS booked txs → BANKGIRO ${ATLAS_GIRO_OLD}. Zwapgrid SINV-ATLAS-NEW → ${ATLAS_GIRO_NEW}. Samma leverantör, nytt giro. PIS skickas inte.`,
+      title: "Leverantören har bytt konto",
+      claim: [
+        {
+          text: `Atlas Copco har fått ${atlasPaid.length} betalningar från er, alla till bankgiro ${ATLAS_GIRO_OLD}.`,
+          cites: ["op-tx-atlas"],
+        },
+        {
+          text: `Den nya fakturan på ${Math.round(newInv.amount / 1000)} 000 kr pekar på ${ATLAS_GIRO_NEW}.`,
+          cites: ["zg-sinv-atlas"],
+        },
+        { text: "Samma leverantör, nytt konto, ingen förvarning." },
+      ],
+      action: "Betalningen hålls tillbaka tills någon ringt Atlas och bekräftat.",
+      cites: ["op-tx-atlas", "zg-sinv-atlas", "op-pis-held"],
     });
   }
 
@@ -200,10 +220,19 @@ export function triangulate(scenarioId: ScenarioId): Finding[] {
     findings.push({
       id: "late",
       tone: "watch",
-      title: "Müller betalar sent. Alltid.",
-      line: `${muller.length} gamla fakturor. Snitt ${avg} dagar efter förfall. Ordern räknar 60 dagar. Historiken säger ~${60 + avg}.`,
-      from: "both",
-      detail: "Zwapgrid förfallodatum mot Open Payments inbetalning. Inte en gissning om tyska bolag — tre matchade poster.",
+      title: "Müller betalar sent varje gång",
+      claim: [
+        {
+          text: `${muller.length} tidigare fakturor är betalda i snitt ${avg} dagar efter förfallodatum.`,
+          cites: ["zg-cinv-muller", "op-tx-muller"],
+        },
+        {
+          text: `Ordern är skriven på 60 dagar, så vi räknar med ${60 + avg} i stället.`,
+          cites: ["model-order"],
+        },
+      ],
+      action: "Prognosen använder det senare datumet. Inget antagande om tyska bolag — tre matchade betalningar.",
+      cites: ["zg-cinv-muller", "op-tx-muller"],
     });
   }
 
@@ -220,20 +249,35 @@ export function triangulate(scenarioId: ScenarioId): Finding[] {
     findings.push({
       id: "nameless",
       tone: "clear",
-      title: "Banken lämnade inget namn",
-      line: `${Math.round(first.tx.amount / 1000)} k in. Open Payments: tomt fält. Zwapgrid: ${first.hit.party}${extra}.`,
-      from: "both",
-      detail: "PSD2 kräver inte ifyllda namn. Vi säger luckan högt och fyller från böckerna — inte tyst.",
+      title: "Namnlös inbetalning identifierad",
+      claim: [
+        {
+          text: `${Math.round(first.tx.amount / 1000)} 000 kr kommer in utan avsändarnamn — banken lämnar fältet tomt.`,
+          cites: ["op-tx-nameless"],
+        },
+        {
+          text: `Beloppet matchar en obetald faktura från ${first.hit.party}${extra}.`,
+          cites: ["zg-cinv-abetong"],
+        },
+      ],
+      action: "Vi fyller luckan från böckerna och säger att vi gjort det, i stället för att bara visa ett belopp.",
+      cites: ["op-tx-nameless", "zg-cinv-abetong"],
     });
   }
 
   findings.push({
     id: "lag",
     tone: "gap",
-    title: "Böckerna släpar 4 dagar",
-    line: "Open Payments är live. Zwapgrid senast 16 nov. Lön och senaste leverantörsfakturor kan saknas.",
-    from: "boks",
-    detail: "När feeden dör gör produkten fortfarande ja/nej på banken. Sämre, inte blankt.",
+    title: "Böckerna släpar fyra dagar",
+    claim: [
+      { text: "Banken svarar i realtid.", cites: ["op-aspsp"] },
+      {
+        text: "Bokföringen synkades senast 16 november, så lön och färska leverantörsfakturor kan saknas.",
+        cites: ["zg-lag", "zg-consent"],
+      },
+    ],
+    action: "Svaret blir sämre, inte blankt: när böckerna tystnar räknar vi vidare på bankens siffror.",
+    cites: ["zg-lag", "op-aspsp"],
   });
 
   if (scenarioId === "service") {

@@ -5,15 +5,44 @@ export const TODAY = parseIso("2026-11-20");
 export type FlowKind = "in" | "out";
 export type FlowSource = "bank" | "boks" | "order";
 
+/**
+ * Hur säker en post är. Det avgör hur mycket vikt den ska få — inte hur
+ * stor den är. En avtalad lön är hårdare än en kund som brukar betala sent.
+ */
+export type Certainty = "fast" | "forutsagbar" | "antagande";
+
 export type Flow = {
   date: string;
   amount: number;
   label: string;
   kind: FlowKind;
   source: FlowSource;
+  certainty: Certainty;
+  /** Varför vi vet det här — visas i klartext, inte som gissning. */
+  basis: string;
+};
+
+export const CERTAINTY_LABEL: Record<Certainty, string> = {
+  fast: "Fast",
+  forutsagbar: "Förutsägbar",
+  antagande: "Antagande",
+};
+
+export const CERTAINTY_TIP: Record<Certainty, string> = {
+  fast: "Avtalad post. Datum och belopp är kända i förväg.",
+  forutsagbar: "Faktura med förfallodatum, justerad efter hur motparten brukar betala.",
+  antagande: "Ingen faktura ännu. Vi räknar med den, men den kan utebli.",
 };
 
 export type Risk = "clear" | "watch" | "storm" | "gap";
+
+/** Kassaläget en given dag, i klartext. Ingen väderliknelse. */
+export const RISK_LABEL: Record<Risk, string> = {
+  clear: "Täckt",
+  watch: "Tunn marginal",
+  storm: "Under noll",
+  gap: "Lucka i data",
+};
 
 export type DayPoint = {
   date: string;
@@ -88,23 +117,23 @@ export const SCENARIOS: Scenario[] = [
 ];
 
 const BASE_FLOWS: Flow[] = [
-  { date: "2026-11-21", amount: 42_000, label: "Kund, pålning Enköping", kind: "in", source: "bank" },
-  { date: "2026-11-24", amount: 61_500, label: "Diesel och slitage", kind: "out", source: "boks" },
-  { date: "2026-11-25", amount: 187_200, label: "Lön november", kind: "out", source: "boks" },
-  { date: "2026-11-27", amount: 28_400, label: "Hyra maskinpark", kind: "out", source: "boks" },
-  { date: "2026-11-28", amount: 92_000, label: "Kundfordran, Villa Åkerby", kind: "in", source: "bank" },
-  { date: "2026-12-01", amount: 38_000, label: "Skattekonto, AG", kind: "out", source: "boks" },
-  { date: "2026-12-04", amount: 140_000, label: "Abetong, etapp 2", kind: "in", source: "bank" },
-  { date: "2026-12-10", amount: 48_700, label: "Borrkronor, Atlas", kind: "out", source: "boks" },
-  { date: "2026-12-12", amount: 19_500, label: "Försäkring maskiner", kind: "out", source: "boks" },
-  { date: "2026-12-15", amount: 76_000, label: "Kund, sent — förväntat", kind: "in", source: "bank" },
-  { date: "2026-12-18", amount: 22_000, label: "Underentreprenör", kind: "out", source: "boks" },
-  { date: "2026-12-23", amount: 187_200, label: "Lön december", kind: "out", source: "boks" },
-  { date: "2026-12-29", amount: 14_800, label: "El och verkstad", kind: "out", source: "boks" },
-  { date: "2027-01-08", amount: 31_000, label: "Vinterservice, låg säsong", kind: "in", source: "bank" },
-  { date: "2027-01-15", amount: 41_200, label: "Leverantör, stål", kind: "out", source: "boks" },
-  { date: "2027-01-25", amount: 187_200, label: "Lön januari", kind: "out", source: "boks" },
-  { date: "2027-02-02", amount: 55_000, label: "Kund, eftersläp", kind: "in", source: "bank" },
+  { date: "2026-11-21", amount: 42_000, label: "Kund, pålning Enköping", kind: "in", source: "bank", certainty: "forutsagbar", basis: "Faktura förfaller idag, kunden har betalat i tid tre gånger" },
+  { date: "2026-11-24", amount: 61_500, label: "Diesel och slitage", kind: "out", source: "boks", certainty: "forutsagbar", basis: "Leverantörsfaktura med förfallodatum" },
+  { date: "2026-11-25", amount: 187_200, label: "Lön november", kind: "out", source: "boks", certainty: "fast", basis: "Lön den 25:e, 11 anställda" },
+  { date: "2026-11-27", amount: 28_400, label: "Hyra maskinpark", kind: "out", source: "boks", certainty: "fast", basis: "Löpande hyresavtal, samma belopp varje månad" },
+  { date: "2026-11-28", amount: 92_000, label: "Kundfordran, Villa Åkerby", kind: "in", source: "bank", certainty: "forutsagbar", basis: "Faktura förfaller, kunden betalar normalt på dagen" },
+  { date: "2026-12-01", amount: 38_000, label: "Skattekonto, arbetsgivaravgift", kind: "out", source: "boks", certainty: "fast", basis: "Skatteverket, förfaller den 12:e — dras den 1:a" },
+  { date: "2026-12-04", amount: 140_000, label: "Abetong, etapp 2", kind: "in", source: "bank", certainty: "forutsagbar", basis: "Faktura CINV-ABETONG förfaller, kunden betalar i tid" },
+  { date: "2026-12-10", amount: 48_700, label: "Borrkronor, Atlas", kind: "out", source: "boks", certainty: "forutsagbar", basis: "Leverantörsfaktura med förfallodatum" },
+  { date: "2026-12-12", amount: 19_500, label: "Försäkring maskiner", kind: "out", source: "boks", certainty: "fast", basis: "Årsavtal, kvartalsvis debitering" },
+  { date: "2026-12-15", amount: 76_000, label: "Kund, väntad betalning", kind: "in", source: "bank", certainty: "antagande", basis: "Ingen faktura ännu — bygger på fjolårets december" },
+  { date: "2026-12-18", amount: 22_000, label: "Underentreprenör", kind: "out", source: "boks", certainty: "forutsagbar", basis: "Leverantörsfaktura med förfallodatum" },
+  { date: "2026-12-23", amount: 187_200, label: "Lön december", kind: "out", source: "boks", certainty: "fast", basis: "Lön, tidigarelagd till den 23:e för helgen" },
+  { date: "2026-12-29", amount: 14_800, label: "El och verkstad", kind: "out", source: "boks", certainty: "fast", basis: "Löpande abonnemang" },
+  { date: "2027-01-08", amount: 31_000, label: "Vinterservice", kind: "in", source: "bank", certainty: "antagande", basis: "Låg säsong — snittet för januari de tre senaste åren" },
+  { date: "2027-01-15", amount: 41_200, label: "Leverantör, stål", kind: "out", source: "boks", certainty: "forutsagbar", basis: "Leverantörsfaktura med förfallodatum" },
+  { date: "2027-01-25", amount: 187_200, label: "Lön januari", kind: "out", source: "boks", certainty: "fast", basis: "Lön den 25:e, 11 anställda" },
+  { date: "2027-02-02", amount: 55_000, label: "Kund, eftersläp", kind: "in", source: "bank", certainty: "antagande", basis: "Förfallna fakturor som ännu inte betalats" },
 ];
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
@@ -122,6 +151,8 @@ export function buildFlows(scenario: Scenario, takeOrder: boolean): Flow[] {
       label: `Material, ${scenario.customer}`,
       kind: "out",
       source: "order",
+      certainty: "fast",
+      basis: "Materialet måste köpas för att ordern ska kunna levereras",
     });
     extra.push({
       date: scenario.payDate,
@@ -129,6 +160,11 @@ export function buildFlows(scenario: Scenario, takeOrder: boolean): Flow[] {
       label: `Betalning, ${scenario.customer}`,
       kind: "in",
       source: "order",
+      certainty: scenario.id === "german" ? "antagande" : "forutsagbar",
+      basis:
+        scenario.id === "german"
+          ? "Avtalat 60 dagar — men de tre tidigare fakturorna betalades i snitt 23 dagar sent"
+          : "Befintlig kund, betalar inom 14 dagar",
     });
   }
   return [...BASE_FLOWS, ...extra];

@@ -1,28 +1,33 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayTip } from "@/components/day-tip";
-import type { DayPoint } from "@/lib/engine";
+import { CERTAINTY_LABEL, type Certainty, type DayPoint } from "@/lib/engine";
 import { addDays, cn, formatSek, iso, parseIso } from "@/lib/utils";
 
 const WEEKDAYS = ["M", "T", "O", "T", "F", "L", "S"];
 const WEEKDAYS_LONG = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"];
 const MONTHS = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
-const BAR: Record<DayPoint["risk"], string> = {
-  storm: "bg-storm",
-  watch: "bg-watch",
-  clear: "bg-clear",
-  gap: "bg-gap",
+/** Prickens form säger hur säker dagens tyngsta post är. */
+const DOT: Record<Certainty, string> = {
+  fast: "bg-fg",
+  forutsagbar: "border border-fg/55",
+  antagande: "bg-fg/20",
 };
-
-function tone(d: DayPoint) {
-  if (d.risk === "storm") return "bg-storm/25";
-  if (d.risk === "watch") return "bg-watch/22";
-  return "bg-clear/18";
-}
 
 function netOf(d: DayPoint) {
   return d.inflows.reduce((s, f) => s + f.amount, 0) - d.outflows.reduce((s, f) => s + f.amount, 0);
+}
+
+function hasEvents(d: DayPoint) {
+  return d.inflows.length > 0 || d.outflows.length > 0;
+}
+
+/** Den post som betyder mest den dagen — störst belopp vinner. */
+function leadFlow(d: DayPoint) {
+  const all = [...d.outflows, ...d.inflows];
+  if (!all.length) return null;
+  return all.reduce((m, f) => (f.amount > m.amount ? f : m), all[0]);
 }
 
 function mondayPad(firstIso: string) {
@@ -63,6 +68,23 @@ export function CashCalendar({
   );
 }
 
+function Legend() {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border pt-3">
+      {(["fast", "forutsagbar", "antagande"] as const).map((c) => (
+        <span key={c} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span className={cn("size-1.5 rounded-full", DOT[c])} />
+          {CERTAINTY_LABEL[c]}
+        </span>
+      ))}
+      <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <span className="h-3 w-px rounded-full bg-storm/45" />
+        Kassan under noll
+      </span>
+    </div>
+  );
+}
+
 function MobileCal({
   days,
   onSelect,
@@ -90,9 +112,7 @@ function MobileCal({
     return byDate.get(key) ?? null;
   });
 
-  const events = days.filter(
-    (d) => d.inflows.length || d.outflows.length || markDates[d.date],
-  );
+  const events = days.filter((d) => hasEvents(d) || markDates[d.date]);
 
   return (
     <div className="space-y-4">
@@ -122,13 +142,13 @@ function MobileCal({
             return (
               <div key={`e-${i}`} className="flex min-h-16 flex-col items-center gap-1 pt-1">
                 <span className="font-mono text-[10px] text-subtle">{WEEKDAYS[i]}</span>
-                <span className="size-8 rounded-full bg-secondary/70" />
+                <span className="size-10" />
               </div>
             );
           }
           const active = d.date === activeDate;
-          const mark = markDates[d.date];
-          const storm = d.risk === "storm";
+          const lead = leadFlow(d);
+          const short = d.endCash < 0;
           return (
             <button
               key={d.date}
@@ -141,16 +161,17 @@ function MobileCal({
                 className={cn(
                   "grid size-10 place-items-center rounded-full font-mono text-sm tabular",
                   active && "bg-primary text-primary-foreground",
-                  !active && storm && "bg-storm/20 text-storm",
-                  !active && !storm && "bg-secondary text-fg",
+                  !active && short && "bg-storm/15 text-storm",
+                  !active && !short && lead && "bg-secondary text-fg",
+                  !active && !short && !lead && "text-subtle",
                 )}
               >
                 {Number(d.date.slice(-2))}
               </span>
-              {mark ? (
-                <span className="font-mono text-[9px] tracking-wide text-fg uppercase">{mark}</span>
+              {lead ? (
+                <span className={cn("size-1.5 rounded-full", DOT[lead.certainty])} />
               ) : (
-                <span className="h-3" />
+                <span className="h-1.5" />
               )}
             </button>
           );
@@ -162,9 +183,9 @@ function MobileCal({
       <ul className="divide-y divide-border overflow-hidden rounded-md border border-border">
         {events.map((d) => {
           const net = netOf(d);
-          const mark = markDates[d.date];
           const active = d.date === activeDate;
-          const empty = !d.inflows.length && !d.outflows.length;
+          const lead = leadFlow(d);
+          const count = d.inflows.length + d.outflows.length;
           return (
             <li key={d.date}>
               <button
@@ -175,38 +196,45 @@ function MobileCal({
                   active && "bg-elevated",
                 )}
               >
-                <span className={cn("h-9 w-1 shrink-0 rounded-full", BAR[d.risk])} />
+                <span className="flex w-10 shrink-0 flex-col items-center">
+                  <span className="font-mono text-[10px] text-subtle">
+                    {WEEKDAYS_LONG[(parseIso(d.date).getDay() + 6) % 7]}
+                  </span>
+                  <span className="font-mono text-sm tabular text-fg">
+                    {Number(d.date.slice(-2))}
+                  </span>
+                </span>
                 <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline gap-2">
-                    <span className="font-mono text-xs text-muted">
-                      {WEEKDAYS_LONG[(parseIso(d.date).getDay() + 6) % 7]} {Number(d.date.slice(-2))}
-                    </span>
-                    {mark ? (
-                      <span className="rounded-full bg-secondary px-1.5 py-px font-mono text-[9px] tracking-wide text-fg uppercase">
-                        {mark}
+                  <span className="block truncate text-sm text-fg">
+                    {lead?.label ?? "Inget bokat"}
+                    {count > 1 ? ` +${count - 1}` : ""}
+                  </span>
+                  {lead ? (
+                    <span className="mt-0.5 flex items-center gap-1.5">
+                      <span className={cn("size-1.5 rounded-full", DOT[lead.certainty])} />
+                      <span className="text-[11px] text-muted-foreground">
+                        {CERTAINTY_LABEL[lead.certainty]}
                       </span>
-                    ) : null}
-                  </span>
-                  <span className="mt-0.5 block truncate text-sm text-fg">
-                    {d.outflows[0]?.label ?? d.inflows[0]?.label ?? "Inget bokat"}
-                    {d.inflows.length + d.outflows.length > 1
-                      ? ` +${d.inflows.length + d.outflows.length - 1}`
-                      : ""}
-                  </span>
+                    </span>
+                  ) : null}
                 </span>
-                <span
-                  className={cn(
-                    "shrink-0 font-mono text-sm tabular",
-                    empty ? "text-subtle" : net >= 0 ? "text-clear" : "text-storm",
-                  )}
-                >
-                  {empty ? "—" : `${net >= 0 ? "+" : ""}${formatSek(net, true)}`}
-                </span>
+                {count ? (
+                  <span
+                    className={cn(
+                      "shrink-0 font-mono text-sm tabular",
+                      net >= 0 ? "text-clear" : "text-storm",
+                    )}
+                  >
+                    {net >= 0 ? "+" : ""}
+                    {formatSek(net, true)}
+                  </span>
+                ) : null}
               </button>
             </li>
           );
         })}
       </ul>
+      <Legend />
     </div>
   );
 }
@@ -242,17 +270,16 @@ function MonthGrid({
       </div>
       <div className="grid grid-cols-7 gap-1.5">
         {cells.map((d, i) => {
-          if (!d) {
-            return <div key={`e-${i}`} className="min-h-[72px] rounded-[10px] bg-secondary/60" />;
-          }
-          const mark = markDates[d.date];
+          if (!d) return <div key={`e-${i}`} className="min-h-[66px]" />;
+
           const active = d.date === activeDate;
           const net = netOf(d);
           const dayNum = Number(d.date.slice(-2));
-          const intensity = Math.min(
-            1,
-            (Math.abs(net) + (d.inflows.length || d.outflows.length ? 40000 : 0)) / 220000,
-          );
+          const lead = leadFlow(d);
+          const short = d.endCash < 0;
+          const isToday = markDates[d.date] === "idag";
+          const monthStart = dayNum === 1;
+
           return (
             <button
               key={d.date}
@@ -260,41 +287,61 @@ function MonthGrid({
               onMouseEnter={() => onSelect(d)}
               onFocus={() => onSelect(d)}
               onClick={() => onSelect(d)}
-              className={`relative min-h-[72px] overflow-hidden rounded-[10px] border p-1.5 text-left transition-[border-color,background-color] duration-150 ${
+              className={cn(
+                "relative flex min-h-[66px] flex-col justify-between overflow-hidden rounded-[10px] border p-1.5 text-left transition-colors duration-150",
                 active
-                  ? "border-fg/35 bg-elevated"
-                  : "border-line bg-card hover:border-line-strong hover:bg-elevated"
-              }`}
+                  ? "border-fg/40 bg-elevated"
+                  : lead
+                    ? "border-line bg-card hover:border-line-strong"
+                    : "border-transparent bg-transparent hover:border-line",
+              )}
             >
-              <div
-                className={`pointer-events-none absolute inset-x-0 bottom-0 ${tone(d)}`}
-                style={{ height: `${12 + intensity * 70}%` }}
-              />
-              <div className="relative flex items-start justify-between">
-                <span className="font-mono text-[11px] text-muted">{dayNum}</span>
-                {mark ? (
-                  <span className="rounded-full bg-secondary px-1 py-px font-mono text-[8px] tracking-wide text-fg uppercase">
-                    {mark}
+              {short ? (
+                <span
+                  className="absolute inset-y-2 left-0 w-px rounded-full bg-storm/45"
+                  aria-hidden="true"
+                />
+              ) : null}
+
+              <span className="flex items-start justify-between gap-1">
+                <span
+                  className={cn(
+                    "font-mono text-[11px] tabular",
+                    isToday ? "font-medium text-fg" : lead ? "text-muted" : "text-subtle/70",
+                  )}
+                >
+                  {monthStart ? `1 ${MONTHS[parseIso(d.date).getMonth()]}` : dayNum}
+                </span>
+                {isToday ? (
+                  <span className="rounded-full bg-fg px-1.5 py-px font-mono text-[8px] tracking-wide text-primary-foreground uppercase">
+                    idag
                   </span>
+                ) : lead ? (
+                  <span className={cn("mt-1 size-1.5 shrink-0 rounded-full", DOT[lead.certainty])} />
                 ) : null}
-              </div>
-              <p
-                className={`relative mt-5 font-mono text-[10px] tabular ${
-                  !d.inflows.length && !d.outflows.length
-                    ? "text-subtle"
-                    : net >= 0
-                      ? "text-clear"
-                      : "text-storm"
-                }`}
-              >
-                {!d.inflows.length && !d.outflows.length
-                  ? "—"
-                  : `${net >= 0 ? "+" : ""}${formatSek(net, true)}`}
-              </p>
+              </span>
+
+              {lead ? (
+                <span className="min-w-0">
+                  <span className="block truncate text-[10px] leading-tight text-muted-foreground">
+                    {lead.label}
+                  </span>
+                  <span
+                    className={cn(
+                      "mt-0.5 block font-mono text-[11px] tabular",
+                      net >= 0 ? "text-clear" : "text-storm",
+                    )}
+                  >
+                    {net >= 0 ? "+" : ""}
+                    {formatSek(net, true)}
+                  </span>
+                </span>
+              ) : null}
             </button>
           );
         })}
       </div>
+      <Legend />
     </div>
   );
 }
