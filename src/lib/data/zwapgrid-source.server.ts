@@ -15,10 +15,12 @@ import type {
   AisBalance,
   BookkeepingCompany,
   BookkeepingInvoice,
+  DataGap,
   FinancialSnapshot,
   FinancialSource,
   RecurringCost,
 } from "./contracts.ts";
+import { fetchBank } from "./open-payments.server";
 
 const PAGE = 100;
 
@@ -199,11 +201,37 @@ const RECURRING: RecurringCost[] = [
 ];
 
 /**
- * Saldot är inte hämtat. Open Payments släpper det först efter signering, och
- * en siffra vi hittat på får inte se ut som ett banksvar — därför står den här,
- * med en lucka bredvid som säger vad den är.
+ * Bara om banken inte svarar. Prognosen ska kunna visas ändå, men en siffra vi
+ * hittat på får aldrig se ut som ett banksvar — därför följer den med en lucka.
  */
 const UNVERIFIED_BALANCE = 418_400;
+
+const UNVERIFIED_BALANCE_FALLBACK = (today: string): AisBalance[] => [
+  { balanceType: "interimAvailable", amount: UNVERIFIED_BALANCE, currency: "SEK", referenceDate: today },
+];
+
+const OFFLINE_BANK_GAPS: DataGap[] = [
+  {
+    source: "open-payments",
+    endpoint: "GET /psd2/accountinformation/v1/accounts",
+    reason: "Banken svarade inte, så saldot är inte hämtat",
+    fallback: `Prognosen utgår från ${UNVERIFIED_BALANCE.toLocaleString("sv-SE")} kr — en angiven siffra, inte ett banksvar`,
+  },
+];
+
+/**
+ * Saldot är äkta, men bankens transaktioner tillhör en annan påhittad kund än
+ * bokföringens — de går därför inte att para ihop med fakturorna. Det sägs högt
+ * i stället för att en falsk matchning visas som ett fynd.
+ */
+const BANK_GAPS: DataGap[] = [
+  {
+    source: "open-payments",
+    endpoint: "GET /psd2/accountinformation/v1/accounts/{id}/transactions",
+    reason: "Sandboxens kontohistorik hör inte till samma bolag som bokföringen",
+    fallback: "Betalmönster räknas ur bokföringens egna betalningar, inte ur banken",
+  },
+];
 
 // ---------------------------------------------------------------- källan
 
@@ -244,38 +272,21 @@ async function load(): Promise<FinancialSnapshot> {
     currency: "SEK",
   };
 
-  const balances: AisBalance[] = [
-    {
-      balanceType: "interimAvailable",
-      amount: UNVERIFIED_BALANCE,
-      currency: "SEK",
-      referenceDate: today,
-    },
-  ];
+  const bank = await fetchBank("SEK").catch((err: unknown) => {
+    console.error("[open-payments] saldot kunde inte hämtas:", err);
+    return null;
+  });
 
   return {
     fetchedAt: new Date().toISOString(),
     mode: "live",
     company: bookkeeping,
-    accounts: [],
-    balances,
-    transactions: [],
+    accounts: bank?.accounts ?? [],
+    balances: bank?.balances ?? UNVERIFIED_BALANCE_FALLBACK(today),
+    transactions: bank?.transactions ?? [],
     invoices,
     recurring: RECURRING,
-    gaps: [
-      {
-        source: "open-payments",
-        endpoint: "GET /psd2/accountinformation/v1/accounts/{id}/balances",
-        reason: "Kontot är inte signerat med BankID, så saldot släpps inte",
-        fallback: `Prognosen utgår från ${UNVERIFIED_BALANCE.toLocaleString("sv-SE")} kr — en angiven siffra, inte ett banksvar`,
-      },
-      {
-        source: "open-payments",
-        endpoint: "GET /psd2/accountinformation/v1/accounts/{id}/transactions",
-        reason: "Samma signering saknas, så betalhistoriken i banken är stängd",
-        fallback: "Betalmönster räknas i stället ur bokföringens egna betalningar",
-      },
-    ],
+    gaps: bank ? BANK_GAPS : OFFLINE_BANK_GAPS,
   };
 }
 

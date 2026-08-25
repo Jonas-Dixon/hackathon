@@ -1,3 +1,4 @@
+import type { FinancialSnapshot } from "./data/contracts";
 import type { SourceId } from "./sources";
 
 /**
@@ -191,8 +192,56 @@ export const CITATIONS: Record<CiteId, Citation> = ORDER.reduce(
   {} as Record<CiteId, Citation>,
 );
 
+/**
+ * Vad körningen faktiskt fick tillbaka, ovanpå fröna.
+ *
+ * Fröna beskriver formen på beviset; först när anropet gjorts vet vi värdet.
+ * Utan det här skulle underlaget visa gårdagens siffra som om banken svarat
+ * den idag — samma sorts lögn som produkten finns för att undvika.
+ */
+let live: Partial<Record<CiteId, Partial<CitationSeed>>> = {};
+
+export function setCitationFacts(next: Partial<Record<CiteId, Partial<CitationSeed>>>) {
+  live = next;
+}
+
 export function cites(ids: CiteId[]): Citation[] {
-  return ids.map((id) => CITATIONS[id]).sort((a, b) => a.num - b.num);
+  return ids.map((id) => ({ ...CITATIONS[id], ...live[id] })).sort((a, b) => a.num - b.num);
+}
+
+/** Beviset för saldot, hämtat ur det snapshot prognosen faktiskt räknade på. */
+export function citationFactsFrom(
+  snapshot: FinancialSnapshot,
+): Partial<Record<CiteId, Partial<CitationSeed>>> {
+  const balance = snapshot.balances[0];
+  const account = snapshot.accounts.find((a) => a.usage === "ORGA") ?? snapshot.accounts[0];
+
+  if (!account || !balance) {
+    return {
+      "op-balance": {
+        value: balance ? `${balance.amount.toLocaleString("sv-SE")} SEK` : "—",
+        note: "Banken svarade inte. Siffran är angiven, inte hämtad — därför räknas den som en lucka.",
+        status: "locked",
+      },
+    };
+  }
+
+  return {
+    "op-balance": {
+      call: `GET /psd2/accountinformation/v1/accounts/${account.resourceId}/balances`,
+      field: `balances[0].balanceAmount · ${balance.balanceType}`,
+      value: `${balance.amount.toLocaleString("sv-SE")} ${balance.currency}`,
+      note: `Saldot vi räknar från, hämtat ur ${account.name ?? account.resourceId} den ${balance.referenceDate}.`,
+      status: "live",
+    },
+    "op-accounts-locked": {
+      call: "GET /psd2/accountinformation/v1/accounts?withBalance=true",
+      field: "accounts.length · valt konto",
+      value: `${snapshot.accounts.length} konton · ${account.resourceId}`,
+      note: `Samtycket räcker för att läsa konton. Vi räknar på företagskontot ${account.iban ?? account.resourceId}.`,
+      status: "live",
+    },
+  };
 }
 
 export const STATUS_WORD: Record<CiteStatus, string> = {

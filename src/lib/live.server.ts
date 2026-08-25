@@ -64,6 +64,16 @@ export function zwapgridConfig() {
   };
 }
 
+export function openPaymentsConfig() {
+  const c = creds();
+  return {
+    auth: c.OPEN_PAYMENTS_AUTH,
+    api: c.OPEN_PAYMENTS_API,
+    clientId: c.OPEN_PAYMENTS_CLIENT_ID,
+    clientSecret: c.OPEN_PAYMENTS_CLIENT_SECRET,
+  };
+}
+
 function abs(base: string, path: string) {
   const root = (base || "").replace(/\/$/, "");
   const suffix = path.startsWith("/") ? path : `/${path}`;
@@ -117,6 +127,9 @@ async function fetchOp(c: Record<string, string>): Promise<{
     .filter((b): b is { bicFi: string; name: string; logoUrl?: string } => Boolean(b))
     .map((b) => ({ bic: b.bicFi, name: b.name, logoUrl: b.logoUrl }));
 
+  const { fetchBank } = await import("./data/open-payments.server");
+  const bank = await fetchBank("SEK").catch(() => null);
+
   const calls: ApiCall[] = [
     {
       id: "op-token",
@@ -153,17 +166,31 @@ async function fetchOp(c: Record<string, string>): Promise<{
       id: "op-accounts",
       source: "op",
       method: "GET",
-      path: "/psd2/accountinformation/v1/accounts",
-      http: null,
-      ok: false,
-      locked: true,
+      path: "/psd2/accountinformation/v1/accounts?withBalance=true",
+      http: bank ? 200 : null,
+      ok: Boolean(bank),
+      locked: !bank,
       title: "AIS accounts",
-      fields: [
-        { k: "required", v: "Consent-ID + X-BicFi + PSU-Corporate-ID" },
-        { k: "consentStatus", v: "received — väntar SCA / BankID" },
-        { k: "balances", v: "—" },
-        { k: "transactions", v: "—" },
-      ],
+      fields: bank
+        ? [
+            { k: "sent", v: "Consent-ID + X-BicFi + PSU-Corporate-ID" },
+            { k: "accounts.length", v: String(bank.accounts.length) },
+            {
+              k: "valt konto",
+              v: `${bank.account.resourceId} · ${bank.account.name ?? "namnlöst"} (${bank.account.usage})`,
+            },
+            ...bank.balances.map((b) => ({
+              k: b.balanceType,
+              v: `${b.amount.toLocaleString("sv-SE")} ${b.currency}`,
+            })),
+            { k: "transactions", v: String(bank.transactions.length) },
+          ]
+        : [
+            { k: "required", v: "Consent-ID + X-BicFi + PSU-Corporate-ID" },
+            { k: "fel", v: "banken svarade inte" },
+            { k: "balances", v: "—" },
+            { k: "transactions", v: "—" },
+          ],
     },
     {
       id: "op-pis",

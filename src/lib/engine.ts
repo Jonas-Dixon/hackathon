@@ -200,7 +200,7 @@ export function buildFlows(scenario: Scenario, takeOrder: boolean): Flow[] {
           : "Befintlig kund, betalar inom 14 dagar",
     });
   }
-  return [...BASE_FLOWS, ...extra];
+  return [...baseFlows(), ...extra];
 }
 
 function riskFor(endCash: number, payrollSoon: boolean): Risk {

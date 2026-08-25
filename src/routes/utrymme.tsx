@@ -5,7 +5,7 @@ import { CapacityNotice, CapacityTimeline } from "@/components/capacity-limits";
 import { SourceLedger } from "@/components/cite";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { baselineCapacity, capacityFor, fmtDay, methodLine } from "@/lib/capacity";
-import { CITATIONS, type CiteId } from "@/lib/citations";
+import { CITATIONS, citationFactsFrom, setCitationFacts, type CiteId } from "@/lib/citations";
 import { availableBalance, toFlows } from "@/lib/data";
 import { getFinancials } from "@/lib/data/financials";
 import { COMPANY, SCENARIOS, TODAY, setLedger } from "@/lib/engine";
@@ -27,6 +27,7 @@ function CapacityPage() {
     cash: availableBalance(financials.balances),
     flows: toFlows(financials, TODAY, 12),
   });
+  setCitationFacts(citationFactsFrom(financials));
 
   const baseline = useMemo(() => baselineCapacity(), []);
   const withOrders = useMemo(

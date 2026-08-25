@@ -15,7 +15,7 @@ import { DataFeedsCompact } from "@/components/source-mark";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { fmtDay } from "@/lib/capacity";
-import { CITATIONS, type CiteId } from "@/lib/citations";
+import { CITATIONS, citationFactsFrom, setCitationFacts, type CiteId } from "@/lib/citations";
 import { availableBalance, toFlows } from "@/lib/data";
 import { getFinancials } from "@/lib/data/financials";
 import { TODAY, setLedger, type DayPoint } from "@/lib/engine";
@@ -41,6 +41,7 @@ function DecisionPage() {
     cash: availableBalance(financials.balances),
     flows: toFlows(financials, TODAY, 12),
   });
+  setCitationFacts(citationFactsFrom(financials));
 
   const d = useDecision();
 
