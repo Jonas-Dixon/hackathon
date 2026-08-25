@@ -5,12 +5,16 @@ import { ProviderBar } from "@/components/providers";
 import { TopNav } from "@/components/top-nav";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { fmtDay } from "@/lib/capacity";
+import { availableBalance, toFlows } from "@/lib/data";
+import { getFinancials } from "@/lib/data/financials";
+import { TODAY, setLedger } from "@/lib/engine";
 import type { VerdictId } from "@/lib/order";
 import { useOrders } from "@/lib/orders-store";
 import { cn, formatSek } from "@/lib/utils";
 
 export const Route = createFileRoute("/ordrar")({
   head: () => ({ meta: [{ title: "Sikt — Mina ordrar" }] }),
+  loader: async () => ({ financials: await getFinancials() }),
   component: OrdersPage,
 });
 
@@ -21,6 +25,15 @@ const BADGE: Record<VerdictId, { word: string; cls: string }> = {
 };
 
 function OrdersPage() {
+  const { financials } = Route.useLoaderData();
+
+  // Samma reskontra som beslutssidan, satt före render — annars visar topbaren
+  // demons saldo när den här sidan är den första man laddar.
+  setLedger({
+    cash: availableBalance(financials.balances),
+    flows: toFlows(financials, TODAY, 12),
+  });
+
   const orders = useOrders((s) => s.orders);
   const lastId = useOrders((s) => s.lastId);
   const clearHighlight = useOrders((s) => s.clearHighlight);

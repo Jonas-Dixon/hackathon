@@ -3,6 +3,7 @@ import { RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { ProviderBar } from "@/components/providers";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { currentCash } from "@/lib/engine";
 import { useOrders } from "@/lib/orders-store";
 import { COMPANY_PROFILE } from "@/lib/profile";
 import { cn, formatSek } from "@/lib/utils";
@@ -57,8 +58,10 @@ export function TopNav({ current, onReset }: { current: string; onReset?: () => 
 
         <div className="ml-auto flex items-center gap-3">
           <ProviderBar compact />
+          {/* Samma saldo som projektionen räknar på — en siffra får inte säga
+              en sak i topbaren och en annan i svaret. */}
           <span className="hidden font-mono text-[13px] tabular text-muted-foreground sm:inline">
-            {formatSek(COMPANY_PROFILE.cash.value, true)}
+            {formatSek(currentCash(), true)}
           </span>
 
           <Tooltip>
