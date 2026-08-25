@@ -1,6 +1,20 @@
 export type SourceId = "bank" | "boks" | "order";
 export type FeedStatus = "live" | "lag" | "model";
 
+/** Grön prick bara när källan faktiskt svarade — inte när vi föll tillbaka på demo. */
+export type FeedHealth = { bank: boolean; boks: boolean };
+
+export function feedHealthFrom(snapshot: {
+  mode: "demo" | "live";
+  accounts: unknown[];
+  invoices: unknown[];
+}): FeedHealth {
+  return {
+    bank: snapshot.mode === "live" && snapshot.accounts.length > 0,
+    boks: snapshot.mode === "live" && snapshot.invoices.length > 0,
+  };
+}
+
 export const FEEDS: Record<
   SourceId,
   {

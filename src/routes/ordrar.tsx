@@ -4,12 +4,13 @@ import { useEffect } from "react";
 import { ProviderBar } from "@/components/providers";
 import { TopNav } from "@/components/top-nav";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { getFinancials } from "@/lib/data/financials";
 import { fmtDay } from "@/lib/capacity";
 import { availableBalance, toFlows } from "@/lib/data";
-import { getFinancials } from "@/lib/data/financials";
 import { TODAY, setLedger } from "@/lib/engine";
 import type { VerdictId } from "@/lib/order";
 import { useOrders } from "@/lib/orders-store";
+import { feedHealthFrom } from "@/lib/sources";
 import { cn, formatSek } from "@/lib/utils";
 
 export const Route = createFileRoute("/ordrar")({
@@ -50,7 +51,7 @@ function OrdersPage() {
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background text-foreground">
-        <TopNav current="/ordrar" />
+        <TopNav current="/ordrar" health={feedHealthFrom(financials)} />
 
         <main className="mx-auto max-w-6xl px-5 py-8 md:px-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -166,7 +167,7 @@ function OrdersPage() {
             </div>
           )}
 
-          <ProviderBar className="mt-10 border-t border-border pt-6" />
+          <ProviderBar className="mt-10 border-t border-border pt-6" health={feedHealthFrom(financials)} />
         </main>
       </div>
     </TooltipProvider>

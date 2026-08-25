@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { currentCash } from "@/lib/engine";
 import { useOrders } from "@/lib/orders-store";
 import { COMPANY_PROFILE } from "@/lib/profile";
+import type { FeedHealth } from "@/lib/sources";
 import { cn, formatSek } from "@/lib/utils";
 
 const LINKS = [
@@ -13,7 +14,15 @@ const LINKS = [
   { to: "/ordrar", label: "Mina ordrar" },
 ];
 
-export function TopNav({ current, onReset }: { current: string; onReset?: () => void }) {
+export function TopNav({
+  current,
+  onReset,
+  health,
+}: {
+  current: string;
+  onReset?: () => void;
+  health?: FeedHealth;
+}) {
   const resetDemo = useOrders((s) => s.resetDemo);
   const count = useOrders((s) => s.orders.length);
   const [spinning, setSpinning] = useState(false);
@@ -57,7 +66,7 @@ export function TopNav({ current, onReset }: { current: string; onReset?: () => 
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
-          <ProviderBar compact />
+          <ProviderBar compact health={health} />
           {/* Samma saldo som projektionen räknar på — en siffra får inte säga
               en sak i topbaren och en annan i svaret. */}
           <span className="hidden font-mono text-[13px] tabular text-muted-foreground sm:inline">

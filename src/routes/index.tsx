@@ -20,6 +20,7 @@ import { availableBalance, toFlows } from "@/lib/data";
 import { getFinancials } from "@/lib/data/financials";
 import { TODAY, setLedger, type DayPoint } from "@/lib/engine";
 import { getLiveSnapshot } from "@/lib/live";
+import { feedHealthFrom } from "@/lib/sources";
 import { cn, formatSek, iso } from "@/lib/utils";
 
 const ALL_CITES = Object.keys(CITATIONS) as CiteId[];
@@ -49,7 +50,7 @@ function DecisionPage() {
     <TooltipProvider>
       <Onboarding />
       <div className="min-h-screen bg-background text-foreground">
-        <TopNav current="/" onReset={d.reset} />
+        <TopNav current="/" onReset={d.reset} health={feedHealthFrom(financials)} />
 
         {d.step === "detail" && d.verdict ? (
           <Detail live={live} verdictDays={d.verdict.days} onBack={() => d.setStep("answer")} />
