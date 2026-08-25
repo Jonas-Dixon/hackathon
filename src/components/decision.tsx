@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowDown, ArrowLeft, ArrowRight, Check } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { CashCurve } from "@/components/cash-curve";
 import { Cite } from "@/components/cite";
 import { LeverPanel } from "@/components/lever-panel";
@@ -10,11 +10,10 @@ import { Triangulation } from "@/components/triangulation";
 import { SourceIcon } from "@/components/source-mark";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { fmtDay } from "@/lib/capacity";
-import { TODAY } from "@/lib/engine";
 import type { Judgement, OrderDraft, VerdictId } from "@/lib/order";
 import { COMPANY_PROFILE, ORDER_TEMPLATE, type Sourced } from "@/lib/profile";
 import { ceilingInsight, levers, orderCeiling } from "@/lib/solver";
-import { addDays, cn, formatSek, iso } from "@/lib/utils";
+import { cn, formatSek } from "@/lib/utils";
 
 export type Step = "ask" | "answer" | "detail";
 
@@ -70,19 +69,16 @@ export function AskStep({
   onSubmit: () => void;
 }) {
   const t = ORDER_TEMPLATE;
-  // Takhöjden beror inte på utkastet — den räknas en gång, inte per knapptryck.
-  const ceiling = useMemo(() => {
+  const [ceiling, setCeiling] = useState<{
+    rows: ReturnType<typeof orderCeiling>;
+    insight: string;
+  } | null>(null);
+  useEffect(() => {
     const rows = orderCeiling();
-    return { rows, insight: ceilingInsight(rows) };
+    setCeiling({ rows, insight: ceilingInsight(rows) });
   }, []);
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit();
-      }}
-      className="onboard-in mx-auto w-full max-w-md"
-    >
+    <div className="onboard-in mx-auto w-full max-w-md">
       <h1 className="font-display text-[clamp(2.25rem,6vw,3.5rem)] leading-[1.02] font-semibold tracking-[-0.02em]">
         Kan ni ta ordern?
       </h1>
@@ -116,8 +112,6 @@ export function AskStep({
           <input
             type="date"
             value={draft.orderDate}
-            min={iso(TODAY)}
-            max={iso(addDays(TODAY, 200))}
             onChange={(e) => e.target.value && setDraft({ ...draft, orderDate: e.target.value })}
             aria-label="Datum då materialet betalas"
             className="w-full border-b border-line-strong bg-transparent pb-1.5 text-[19px] tabular outline-none focus:border-fg"
@@ -126,7 +120,8 @@ export function AskStep({
       </div>
 
       <button
-        type="submit"
+        type="button"
+        onClick={onSubmit}
         disabled={draft.amount <= 0}
         className="mt-8 w-full rounded-md bg-primary px-6 py-4 font-mono text-[12px] tracking-[0.18em] text-primary-foreground uppercase transition-transform duration-150 hover:translate-y-px disabled:opacity-40"
       >
@@ -146,10 +141,12 @@ export function AskStep({
         <Prefill label="Beställare" field={COMPANY_PROFILE.orgNumber} />
       </div>
 
-      <div className="mt-10">
-        <OrderCeiling rows={ceiling.rows} insight={ceiling.insight} />
-      </div>
-    </form>
+      {ceiling ? (
+        <div className="mt-10">
+          <OrderCeiling rows={ceiling.rows} insight={ceiling.insight} />
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -166,8 +163,14 @@ export function AnswerStep({
   onDetail: () => void;
   onPlace: (date: string) => void;
 }) {
-  // Spakarna skannar hundratals projektioner — räkna om bara när ordern ändras.
-  const fixes = useMemo(() => levers(draft), [draft]);
+  const [fixes, setFixes] = useState<ReturnType<typeof levers>>([]);
+  useEffect(() => {
+    try {
+      setFixes(levers(draft));
+    } catch {
+      setFixes([]);
+    }
+  }, [draft]);
   return (
     <div className="onboard-in mx-auto w-full max-w-2xl">
       <button

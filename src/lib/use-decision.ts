@@ -10,7 +10,16 @@ export function useDecision() {
   const [draft, setDraft] = useState<OrderDraft>(() => defaultDraft());
   const [step, setStep] = useState<Step>("ask");
   const [placed, setPlaced] = useState(false);
-  const verdict = useMemo(() => judge(draft), [draft]);
+  // Inte på frågesidan — earliestSafeDate skannar 120 projektioner och fryser klicket.
+  const verdict = useMemo(() => {
+    if (step === "ask" && !placed) return null;
+    try {
+      return judge(draft);
+    } catch (err) {
+      console.error("[sikt] judge failed", err);
+      return null;
+    }
+  }, [draft, step, placed]);
   const addOrder = useOrders((s) => s.add);
 
   return {
@@ -38,7 +47,7 @@ export function useDecision() {
         customer: ORDER_TEMPLATE.customer.value,
         verdict: final.verdict,
         trough: final.trough,
-        followedAdvice: verdict.earliest ? date === verdict.earliest : true,
+        followedAdvice: final.earliest ? date === final.earliest : true,
         attachment: null,
       });
     },

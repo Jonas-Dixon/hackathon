@@ -1,7 +1,8 @@
-import { addDays, iso, parseIso } from "./utils";
+import { addDays, iso } from "./utils";
 
 /** Riktigt datum, för reskontran vi läser är daterad i verklig tid. */
-export const TODAY = parseIso(new Date().toISOString().slice(0, 10));
+const now = new Date();
+export const TODAY = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
 export type FlowKind = "in" | "out";
 export type FlowSource = "bank" | "boks" | "order";

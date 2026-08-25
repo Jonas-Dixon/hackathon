@@ -50,11 +50,11 @@ function DecisionPage() {
       <div className="min-h-screen bg-background text-foreground">
         <TopNav current="/" onReset={d.reset} />
 
-        {d.step === "detail" ? (
+        {d.step === "detail" && d.verdict ? (
           <Detail live={live} verdictDays={d.verdict.days} onBack={() => d.setStep("answer")} />
         ) : (
           <div className="flex min-h-[calc(100vh-61px)] items-start px-5 py-12 md:px-8">
-            {d.placed ? (
+            {d.placed && d.verdict ? (
               <PlacedStep
                 draft={d.draft}
                 verdict={d.verdict}
@@ -67,7 +67,7 @@ function DecisionPage() {
                 setDraft={d.setDraft}
                 onSubmit={() => d.setStep("answer")}
               />
-            ) : (
+            ) : d.verdict ? (
               <AnswerStep
                 verdict={d.verdict}
                 draft={d.draft}
@@ -75,7 +75,7 @@ function DecisionPage() {
                 onDetail={() => d.setStep("detail")}
                 onPlace={d.place}
               />
-            )}
+            ) : null}
           </div>
         )}
       </div>

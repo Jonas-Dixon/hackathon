@@ -240,6 +240,7 @@ export function CashCurve({ verdict, className }: { verdict: Judgement; classNam
   const alt = verdict.suggestedDays
     ? windowFrom(verdict.suggestedDays, verdict.earliest as string)
     : null;
+  if (chosen.length < 2) return null;
 
   const values = [...chosen.map((d) => d.endCash), ...(alt?.map((d) => d.endCash) ?? []), 0];
   const lo = Math.min(...values);

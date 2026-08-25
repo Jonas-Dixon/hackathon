@@ -76,6 +76,17 @@ export function orderFlows(draft: OrderDraft): Flow[] {
 }
 
 function troughOf(days: DayPoint[]): DayPoint {
+  if (!days.length) {
+    return {
+      date: iso(TODAY),
+      weekday: "",
+      startCash: 0,
+      endCash: 0,
+      inflows: [],
+      outflows: [],
+      risk: "gap",
+    };
+  }
   return days.reduce((m, p) => (p.endCash < m.endCash ? p : m), days[0]);
 }
 
@@ -114,7 +125,8 @@ export function orderSpanDays(): number {
 
 /** Horisonten måste nå förbi ordern även när den skjuts framåt i tiden. */
 export function horizonFor(orderDate: string): number {
-  const offset = Math.round((Date.parse(orderDate) - TODAY.getTime()) / 86_400_000);
+  const placed = parseIso(orderDate);
+  const offset = Math.round((placed.getTime() - TODAY.getTime()) / 86_400_000);
   return Math.max(0, offset) + orderSpanDays();
 }
 
