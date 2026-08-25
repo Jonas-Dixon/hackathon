@@ -1,3 +1,4 @@
+import { DayCapacityInline } from "@/components/capacity-limits";
 import { SourceChip } from "@/components/source-mark";
 import { formatSek } from "@/lib/utils";
 import type { DayPoint } from "@/lib/engine";
@@ -53,6 +54,7 @@ export function DayTip({ day }: { day: DayPoint | null }) {
         ))}
         {!rows.length ? <li className="text-sm text-subtle">Inget bokat den här dagen.</li> : null}
       </ul>
+      <DayCapacityInline endCash={day.endCash} />
     </div>
   );
 }

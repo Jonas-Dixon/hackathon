@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import ClickSpark from "@/components/bits/ClickSpark";
 import SpotlightCard from "@/components/bits/SpotlightCard";
+import { CapacityMini } from "@/components/capacity-limits";
 import { CashCalendar } from "@/components/cash-calendar";
 import { CashChart } from "@/components/cash-chart";
 import { CrossBoard } from "@/components/cross-board";
@@ -26,6 +27,7 @@ import {
   type DayPoint,
   type ScenarioId,
 } from "@/lib/engine";
+import { capacitySnapshot } from "@/lib/capacity";
 import { getLiveSnapshot } from "@/lib/live";
 import { formatSek, iso } from "@/lib/utils";
 
@@ -45,6 +47,7 @@ function Home() {
   const days = useMemo(() => project(scenario, accept), [scenario, accept]);
   const verdict = useMemo(() => decide(scenario, accept), [scenario, accept]);
   const notes = useMemo(() => sidekickNotes(scenario, verdict), [scenario, verdict]);
+  const capacity = useMemo(() => capacitySnapshot(), []);
   const selected = hover ?? days.find((d) => d.date === iso(TODAY)) ?? days[0] ?? null;
 
   const marks: Record<string, string> = {};
@@ -101,6 +104,12 @@ function Home() {
             </button>
           </div>
         ) : null}
+        <div className="px-4 pb-4 lg:px-3 lg:pb-3">
+          <p className="mb-2 hidden px-1 font-mono text-[10px] tracking-[0.16em] text-subtle uppercase lg:block">
+            Utrymme
+          </p>
+          <CapacityMini row={capacity.horizon[0]} />
+        </div>
         <div className="hidden lg:block">
           <DataFeeds />
         </div>
